@@ -1,0 +1,56 @@
+name: Deploy to Oracle Cloud
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    concurrency: deploy-group
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync repo to the instance
+        run: |
+          rsync -az --delete \
+            --exclude '.git' --exclude 'node_modules' --exclude 'dist' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/vapor/"
+
+      - name: Write server-side .env
+        run: |
+          cat > /tmp/vapor.env <<EOF
+          BASE_MAINNET_RPC_URL=${{ secrets.BASE_MAINNET_RPC_URL }}
+          SETTLEMENT_SIGNER_PRIVATE_KEY=${{ secrets.SETTLEMENT_SIGNER_PRIVATE_KEY }}
+          DEFAULT_MAX_RISK_SCORE=${{ secrets.DEFAULT_MAX_RISK_SCORE }}
+          DEFAULT_MAX_AMOUNT_USD=${{ secrets.DEFAULT_MAX_AMOUNT_USD }}
+          REPUTATION_PROVIDER_BASE_URL=${{ secrets.REPUTATION_PROVIDER_BASE_URL }}
+          REPUTATION_PROVIDER_API_KEY=${{ secrets.REPUTATION_PROVIDER_API_KEY }}
+          WEBHOOK_SIGNING_SECRET=${{ secrets.WEBHOOK_SIGNING_SECRET }}
+          API_KEYS=${{ secrets.API_KEYS }}
+          EOF
+          scp -i ~/.ssh/deploy_key /tmp/vapor.env "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/vapor/.env"
+          rm -f /tmp/vapor.env
+
+      - name: Build and restart the container
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" '
+            set -euo pipefail
+            cd /opt/vapor
+            chmod 600 .env
+            docker compose up -d --build --remove-orphans
+            docker image prune -f
+          '

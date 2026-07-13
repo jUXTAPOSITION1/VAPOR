@@ -63,9 +63,9 @@ npm run dev
 
 The server listens on `PORT` (default `3402`).
 
-### Production deploy (Fly.io)
+### Production deploy (Oracle Cloud)
 
-Deploys automatically to Fly.io on every push to `main` via GitHub Actions once the one-time account setup is done — see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+Deploys automatically to an Oracle Cloud compute instance on every push to `main` via GitHub Actions (SSH + Docker Compose) once the one-time instance setup is done — see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## API
 

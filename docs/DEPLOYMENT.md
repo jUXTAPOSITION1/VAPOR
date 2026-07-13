@@ -1,35 +1,71 @@
-# Deployment (Fly.io)
+# Deployment (Oracle Cloud)
 
-VAPOR ships ready to deploy to [Fly.io](https://fly.io) straight from its Dockerfile. Fly no longer offers a fully free tier — this runs comfortably on a single `shared-cpu-1x` / 256MB machine, which is a low, usage-metered cost for the traffic a launch-stage facilitator sees, and scales to zero when idle.
+VAPOR deploys to a plain Docker host via SSH — no PaaS lock-in, works on any VM including Oracle Cloud Infrastructure's (OCI) Always Free compute shapes (the Ampere A1 ARM shape gives up to 4 OCPUs / 24GB RAM at no cost, which is comfortably more than this service needs).
 
-## One-time setup (do this yourself — these are billing-bearing account actions)
+## One-time setup (do this yourself — these are your account's actions)
 
-1. Create a Fly.io account and install `flyctl`, then `flyctl auth login`.
-2. Create the app (name must match `app` in `fly.toml`, or edit `fly.toml` to match yours):
-   ```bash
-   flyctl apps create vapor-facilitator
-   ```
-3. Create a persistent volume for the SQLite audit log (matches `fly.toml`'s mount):
-   ```bash
-   flyctl volumes create vapor_data --region iad --size 1 --app vapor-facilitator
-   ```
-4. Create a deploy token and add it as a GitHub Actions repo secret named `FLY_API_TOKEN`:
-   ```bash
-   flyctl tokens create deploy --app vapor-facilitator
-   ```
-5. Add `SETTLEMENT_SIGNER_PRIVATE_KEY` and `BASE_MAINNET_RPC_URL` as GitHub Actions repo secrets (Settings → Secrets and variables → Actions). These never get baked into the Docker image or exposed in logs — they're pushed to Fly as Fly secrets, which inject them as env vars into the running machine at boot.
-6. Run the **"Sync secrets to Fly.io"** workflow once (Actions tab → Run workflow) to push those two values onto the Fly app.
+### 1. Provision the instance
+
+In the OCI console: **Compute → Instances → Create Instance**.
+- Image: Ubuntu 22.04 (or later) — pick the **Ampere (ARM)** shape under "Always Free eligible" if available in your region; the AMD Micro shape also works, just with less headroom.
+- Add your SSH public key during creation (or after, via cloud-init).
+- Note the instance's **public IP**.
+
+### 2. Open the firewall
+
+Two layers both need a rule for port 3402 (or whatever `PORT` you use) inbound, and 22 for SSH:
+- OCI **Security List** / **Network Security Group** on the instance's subnet — add an ingress rule for TCP/3402 (and 22, usually already open).
+- The instance's own OS firewall (Ubuntu ships with `iptables` rules OCI's image preconfigures for port 22 only) — run on the instance:
+  ```bash
+  sudo iptables -I INPUT -p tcp --dport 3402 -j ACCEPT
+  sudo netfilter-persistent save
+  ```
+
+If you have a domain, put a reverse proxy (Caddy or nginx) in front for TLS rather than exposing 3402 directly — not included here since it depends on your domain/DNS setup; ask if you want this wired in.
+
+### 3. Install Docker on the instance
+
+```bash
+ssh ubuntu@<instance-ip>
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+# log out and back in for the group change to take effect
+```
+
+### 4. Clone the repo once
+
+```bash
+sudo mkdir -p /opt/vapor && sudo chown $USER:$USER /opt/vapor
+git clone https://github.com/jUXTAPOSITION1/VAPOR.git /opt/vapor
+```
+(The deploy workflow overwrites this directory's contents on every deploy via `rsync`, so the initial clone just needs to exist — it doesn't need to stay up to date manually.)
+
+### 5. Add GitHub Actions repo secrets
+
+Settings → Secrets and variables → Actions:
+
+| Secret | Value |
+|---|---|
+| `SSH_HOST` | the instance's public IP |
+| `SSH_USER` | `ubuntu` (or your image's default user) |
+| `SSH_PRIVATE_KEY` | the private key matching the public key on the instance |
+| `BASE_MAINNET_RPC_URL` | your RPC endpoint (already added) |
+| `SETTLEMENT_SIGNER_PRIVATE_KEY` | your funded signer wallet's key (already added) |
+
+The last two never touch the Docker image or GitHub Actions logs — the workflow writes them into a `.env` file on the instance (`chmod 600`) that only `docker compose` reads at container start.
 
 ## Ongoing deploys
 
-Every push to `main` runs CI (typecheck, tests, build) and, if it passes, deploys automatically via the **"Deploy to Fly.io"** workflow. No manual step needed after the one-time setup above.
+Every push to `main` runs CI (typecheck, tests, build) and, if it passes, the **"Deploy to Oracle Cloud"** workflow: syncs the repo to `/opt/vapor` via `rsync` over SSH, writes the `.env`, and runs `docker compose up -d --build`. No manual step needed after the one-time setup above.
 
 ## Rotating secrets
 
-Update the GitHub Actions secret value, then re-run the "Sync secrets to Fly.io" workflow manually. This is deliberately not automatic on every push — pushing an unchanged secret to Fly still triggers a machine restart, which there's no reason to do on every commit.
+Update the GitHub Actions secret value, then either push any commit to `main` or manually trigger the "Deploy to Oracle Cloud" workflow (Actions tab → Run workflow) — the `.env` file is rewritten from the current secret values on every deploy.
 
-## Scaling beyond a single machine
+## Data persistence
 
-`fly.toml`'s `min_machines_running = 1` keeps one instance always warm (no cold-start latency on payment verification). To scale further:
-- Bump `[[vm]] size`/`memory` for more throughput per machine, or
-- Increase `min_machines_running` and switch `DATABASE_URL` to a managed Postgres instance (`flyctl postgres create`) — SQLite on a single Fly volume doesn't support multiple machines writing concurrently. `prisma/schema.prisma`'s datasource `provider` would need to change from `sqlite` to `postgresql` at that point; the schema itself needs no other changes.
+The SQLite audit log lives in the `vapor-data` Docker volume, which persists across deploys/restarts on the instance (it's not touched by `rsync` or `docker compose up --build`, only the image is rebuilt). Back up `/var/lib/docker/volumes/vapor_vapor-data` if you want an off-instance copy.
+
+## Scaling beyond one instance
+
+Single-instance SQLite doesn't support multiple machines writing concurrently. To run more than one: switch `prisma/schema.prisma`'s datasource `provider` from `sqlite` to `postgresql`, point `DATABASE_URL` at a managed or self-hosted Postgres instance, and put a load balancer in front of however many OCI instances you add.
