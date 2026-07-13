@@ -1,0 +1,41 @@
+// VAPOR's audit + analytics store. SQLite in development, Postgres in
+// production — only the `provider`/`url` below change between the two,
+// the schema itself is portable.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// One row per /verify or /settle call — the audit-grade record a payee
+/// can export to prove exactly what was checked and decided, and when.
+model PaymentRecord {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  stage    String // "verify" | "settle"
+  network  String
+  resource String
+  payTo    String
+  asset    String
+  amount   String // raw token units, kept as a string to preserve precision
+
+  payer         String?
+  isValid       Boolean
+  invalidReason String?
+
+  riskScore   Int?
+  riskBand    String?
+  riskReasons String? // JSON-encoded string[]
+
+  settled         Boolean?
+  transactionHash String?
+  errorReason     String?
+
+  @@index([payTo, createdAt])
+  @@index([payer])
+  @@index([transactionHash])
+}

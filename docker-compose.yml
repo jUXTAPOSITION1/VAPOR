@@ -1,0 +1,24 @@
+services:
+  vapor:
+    build: .
+    ports:
+      - "3402:3402"
+    environment:
+      NODE_ENV: production
+      PORT: 3402
+      # Swap for a postgresql:// URL and switch prisma/schema.prisma's
+      # datasource provider to "postgresql" for a multi-instance deployment.
+      DATABASE_URL: file:/data/vapor.db
+      BASE_MAINNET_RPC_URL: ${BASE_MAINNET_RPC_URL}
+      SETTLEMENT_SIGNER_PRIVATE_KEY: ${SETTLEMENT_SIGNER_PRIVATE_KEY}
+      DEFAULT_MAX_RISK_SCORE: ${DEFAULT_MAX_RISK_SCORE:-70}
+      DEFAULT_MAX_AMOUNT_USD: ${DEFAULT_MAX_AMOUNT_USD:-1000}
+      REPUTATION_PROVIDER_BASE_URL: ${REPUTATION_PROVIDER_BASE_URL}
+      REPUTATION_PROVIDER_API_KEY: ${REPUTATION_PROVIDER_API_KEY}
+      WEBHOOK_SIGNING_SECRET: ${WEBHOOK_SIGNING_SECRET}
+      API_KEYS: ${API_KEYS}
+    volumes:
+      - vapor-data:/data
+
+volumes:
+  vapor-data:
