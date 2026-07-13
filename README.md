@@ -63,6 +63,10 @@ npm run dev
 
 The server listens on `PORT` (default `3402`).
 
+### Production deploy (Fly.io)
+
+Deploys automatically to Fly.io on every push to `main` via GitHub Actions once the one-time account setup is done — see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
 ## API
 
 | Endpoint | Method | Auth | Purpose |
