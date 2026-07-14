@@ -82,4 +82,25 @@ describe("VAPOR API", () => {
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty("error");
   });
+
+  it("POST /verify-batch rejects an empty payments array before any chain work", async () => {
+    const res = await request(app).post("/verify-batch").send({ x402Version: 1, payments: [] });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty("error");
+  });
+
+  it("POST /verify-batch rejects more than 10 payments before any chain work", async () => {
+    const entry = { not: "a valid payment entry" };
+    const res = await request(app)
+      .post("/verify-batch")
+      .send({ x402Version: 1, payments: Array(11).fill(entry) });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty("error");
+  });
+
+  it("POST /settle-batch rejects a malformed body before any chain work", async () => {
+    const res = await request(app).post("/settle-batch").send({ not: "a valid request" });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty("error");
+  });
 });

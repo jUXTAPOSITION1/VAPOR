@@ -44,3 +44,20 @@ export const verifyRequestSchema = z.object({
 });
 
 export const settleRequestSchema = verifyRequestSchema;
+
+// Batch size is capped at 10: /settle-batch broadcasts each item sequentially
+// against VAPOR's one settlement-signer wallet (see settlement.service.ts's
+// nonce-race comment), so a large batch translates directly into request
+// latency (each item waits for an on-chain confirmation before the next
+// starts) — 10 keeps the worst case within a reasonable HTTP timeout.
+const MAX_BATCH_SIZE = 10;
+
+const batchEntrySchema = z.object({
+  paymentPayload: paymentPayloadSchema,
+  paymentRequirements: paymentRequirementsSchema,
+});
+
+export const batchRequestSchema = z.object({
+  x402Version: z.number().int(),
+  payments: z.array(batchEntrySchema).min(1, "payments must contain at least one entry").max(MAX_BATCH_SIZE, `payments cannot exceed ${MAX_BATCH_SIZE} entries`),
+});

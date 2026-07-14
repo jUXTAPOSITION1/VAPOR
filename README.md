@@ -75,6 +75,8 @@ Deploys automatically to an Oracle Cloud compute instance on every push to `main
 |---|---|---|---|
 | `/verify` | POST | none (public x402 handshake) | Verify a payment payload against payment requirements; returns a risk assessment |
 | `/settle` | POST | none (public x402 handshake) | Re-verify and broadcast `transferWithAuthorization` on-chain |
+| `/verify-batch` | POST | none | Verify up to 10 independent "exact" payments in one call |
+| `/settle-batch` | POST | none | Settle up to 10 independent "exact" payments in one call (sequential, real on-chain txs) |
 | `/supported` | GET | none | List active `scheme`/`network` combinations |
 | `/risk-scan/:address` | GET | none | Score any address on-demand, outside a payment flow |
 | `/payee-reputation/:address` | GET | none | Score a payee/service (the mirror of `/risk-scan`); optional `?agentId=` opts into ERC-8004 reputation enrichment |

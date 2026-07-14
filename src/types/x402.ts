@@ -69,6 +69,33 @@ export interface SettleResponse {
   amount?: string;
 }
 
+/**
+ * VAPOR extensions, not part of the base x402 spec: a convenience for a
+ * payer settling several independent "exact"-scheme payments in one HTTP
+ * call instead of one round trip each. Each entry is a completely normal,
+ * standalone signed EIP-3009 authorization — this is not the real on-chain
+ * escrow/voucher "batch-settlement" scheme (x402Version 2, stateful payment
+ * channels); it's N ordinary payments processed together for convenience,
+ * still settling as N separate on-chain transactions.
+ */
+export interface BatchVerifyRequest {
+  x402Version: number;
+  payments: Array<{ paymentPayload: PaymentPayload; paymentRequirements: PaymentRequirements }>;
+}
+
+export interface BatchVerifyResponse {
+  results: VerifyResponse[];
+}
+
+export interface BatchSettleRequest {
+  x402Version: number;
+  payments: Array<{ paymentPayload: PaymentPayload; paymentRequirements: PaymentRequirements }>;
+}
+
+export interface BatchSettleResponse {
+  results: SettleResponse[];
+}
+
 export interface SupportedKind {
   scheme: "exact";
   network: string;

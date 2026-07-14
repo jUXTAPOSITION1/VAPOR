@@ -79,6 +79,30 @@ Same request shape as `/verify`. Re-runs the full verification pipeline against 
 }
 ```
 
+## POST /verify-batch / POST /settle-batch
+
+Convenience wrappers for verifying/settling several **independent** "exact"-scheme payments in one call, capped at 10 entries. This is not the real on-chain escrow/voucher `batch-settlement` scheme from the x402 spec (a different, stateful, `x402Version: 2` protocol with payment channels) — each entry here is a completely ordinary, standalone signed EIP-3009 authorization; VAPOR just processes several of them per request instead of one round trip each.
+
+**Request**
+
+```json
+{
+  "x402Version": 1,
+  "payments": [
+    { "paymentPayload": { "...": "..." }, "paymentRequirements": { "...": "..." } },
+    { "paymentPayload": { "...": "..." }, "paymentRequirements": { "...": "..." } }
+  ]
+}
+```
+
+**Response**
+
+```json
+{ "results": [ { "isValid": true, "...": "..." }, { "isValid": false, "...": "..." } ] }
+```
+
+`/verify-batch` runs all entries in parallel (read-only). `/settle-batch` runs entries **sequentially** — every settlement broadcasts from VAPOR's one settlement-signer wallet, and concurrent broadcasts would race on nonce assignment. One entry failing never stops the rest; each gets its own result in `results`, in request order.
+
 ## GET /supported
 
 ```json

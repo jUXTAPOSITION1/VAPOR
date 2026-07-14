@@ -3,6 +3,8 @@ import { pinoHttp } from "pino-http";
 import { logger } from "../utils/logger.js";
 import { verifyRouter } from "./routes/verify.route.js";
 import { settleRouter } from "./routes/settle.route.js";
+import { verifyBatchRouter } from "./routes/verify-batch.route.js";
+import { settleBatchRouter } from "./routes/settle-batch.route.js";
 import { supportedRouter } from "./routes/supported.route.js";
 import { riskScanRouter } from "./routes/risk-scan.route.js";
 import { payeeReputationRouter } from "./routes/payee-reputation.route.js";
@@ -34,6 +36,8 @@ export function createApp() {
 
   app.use(verifyRouter);
   app.use(settleRouter);
+  app.use(verifyBatchRouter);
+  app.use(settleBatchRouter);
   app.use(supportedRouter);
   app.use(riskScanRouter);
   app.use(payeeReputationRouter);
