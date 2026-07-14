@@ -39,3 +39,28 @@ model PaymentRecord {
   @@index([payer])
   @@index([transactionHash])
 }
+
+/// Queued webhook delivery. Created only once a dispatch's first attempt
+/// fails (a successful first attempt is never persisted — no DB write on
+/// the fast/common path), then retried with exponential backoff by
+/// retryDueWebhooks() until it succeeds or MAX_ATTEMPTS is reached. Rows
+/// are never deleted — "delivered"/"failed" terminal rows double as an
+/// audit trail of every retry a payee's endpoint ever needed.
+model WebhookDelivery {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  url       String
+  eventType String
+  payload   String // raw JSON body sent (and signed) verbatim on every attempt
+  signature String?
+
+  status        String // "pending" | "delivered" | "failed"
+  attempts      Int
+  nextAttemptAt DateTime
+  lastError     String?
+  deliveredAt   DateTime?
+
+  @@index([status, nextAttemptAt])
+}

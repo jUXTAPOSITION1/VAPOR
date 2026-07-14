@@ -223,3 +223,5 @@ VAPOR POSTs a JSON body to the given URL on each decision:
 Event types: `payment.verified`, `payment.denied`, `payment.settled`, `payment.settlement_failed`.
 
 If `WEBHOOK_SIGNING_SECRET` is configured, each delivery includes an `x-vapor-signature` header: `HMAC-SHA256(secret, rawBody)`, hex-encoded. Delivery is fire-and-forget with a 5-second timeout — a slow or failing endpoint never blocks the payment path.
+
+**Retries.** A first-attempt failure is queued and retried with exponential backoff (5s, 30s, 2min, 10min, 30min, 1hr — six attempts total, ~2.5h worst case) until it succeeds or is marked permanently failed. The queue is backed by the database, not memory, so it survives a process restart. Every retry resends the exact same signed payload from the first attempt, never a re-signed one. Aggregate delivery health (`pending`/`delivered`/`failed` counts) is exposed at `GET /stats` under `webhookDeliveries`; a delivery that succeeds on its first attempt is never persisted, so this only reflects deliveries that needed at least one retry.

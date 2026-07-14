@@ -41,6 +41,7 @@ describe("VAPOR API", () => {
     expect(res.body).toHaveProperty("totals");
     expect(res.body.totals).toHaveProperty("verifyRequests");
     expect(res.body.totals).toHaveProperty("settledVolumeUsd");
+    expect(res.body).toHaveProperty("webhookDeliveries");
     expect(res.body).not.toHaveProperty("payTo");
     expect(res.body).not.toHaveProperty("payer");
   });

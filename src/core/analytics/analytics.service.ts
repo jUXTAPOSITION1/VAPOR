@@ -70,6 +70,11 @@ export interface PlatformStats {
   };
   averageRiskScore: number | null;
   riskBandCounts: Record<string, number>;
+  /** Webhook delivery health — pending/delivered/failed counts across
+   * every dispatch VAPOR has ever queued for retry (see webhook.service.ts).
+   * Deliveries that succeeded on the first attempt are never persisted, so
+   * this only reflects deliveries that needed at least one retry. */
+  webhookDeliveries: Record<string, number>;
 }
 
 /**
@@ -80,23 +85,32 @@ export interface PlatformStats {
  * row, since (unlike a single payee's history) this table only grows.
  */
 export async function getPlatformStats(): Promise<PlatformStats> {
-  const [verifyRequests, settleRequests, validVerifyCount, settledCount, riskAvg, riskBandGroups, settledAmounts] =
-    await Promise.all([
-      prisma.paymentRecord.count({ where: { stage: "verify" } }),
-      prisma.paymentRecord.count({ where: { stage: "settle" } }),
-      prisma.paymentRecord.count({ where: { stage: "verify", isValid: true } }),
-      prisma.paymentRecord.count({ where: { stage: "settle", settled: true } }),
-      prisma.paymentRecord.aggregate({ _avg: { riskScore: true }, where: { riskScore: { not: null } } }),
-      prisma.paymentRecord.groupBy({
-        by: ["riskBand"],
-        _count: { riskBand: true },
-        where: { riskBand: { not: null } },
-      }),
-      prisma.paymentRecord.findMany({
-        where: { stage: "settle", settled: true },
-        select: { amount: true },
-      }),
-    ]);
+  const [
+    verifyRequests,
+    settleRequests,
+    validVerifyCount,
+    settledCount,
+    riskAvg,
+    riskBandGroups,
+    settledAmounts,
+    webhookGroups,
+  ] = await Promise.all([
+    prisma.paymentRecord.count({ where: { stage: "verify" } }),
+    prisma.paymentRecord.count({ where: { stage: "settle" } }),
+    prisma.paymentRecord.count({ where: { stage: "verify", isValid: true } }),
+    prisma.paymentRecord.count({ where: { stage: "settle", settled: true } }),
+    prisma.paymentRecord.aggregate({ _avg: { riskScore: true }, where: { riskScore: { not: null } } }),
+    prisma.paymentRecord.groupBy({
+      by: ["riskBand"],
+      _count: { riskBand: true },
+      where: { riskBand: { not: null } },
+    }),
+    prisma.paymentRecord.findMany({
+      where: { stage: "settle", settled: true },
+      select: { amount: true },
+    }),
+    prisma.webhookDelivery.groupBy({ by: ["status"], _count: { status: true } }),
+  ]);
 
   let settledVolumeRaw = 0n;
   for (const { amount } of settledAmounts) {
@@ -110,6 +124,11 @@ export async function getPlatformStats(): Promise<PlatformStats> {
   const riskBandCounts: Record<string, number> = {};
   for (const group of riskBandGroups) {
     if (group.riskBand) riskBandCounts[group.riskBand] = group._count.riskBand;
+  }
+
+  const webhookDeliveries: Record<string, number> = {};
+  for (const group of webhookGroups) {
+    webhookDeliveries[group.status] = group._count.status;
   }
 
   // USDC is the only supported asset today, always 6 decimals — see
@@ -130,6 +149,7 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     },
     averageRiskScore: riskAvg._avg.riskScore,
     riskBandCounts,
+    webhookDeliveries,
   };
 }
 
