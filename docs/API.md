@@ -134,6 +134,31 @@ Runs the risk scanner outside of a payment flow — useful for pre-screening at 
 }
 ```
 
+## GET /payee-reputation/:address?network=eip155:8453&agentId=
+
+The mirror of `/risk-scan`: lets a *payer* pre-check a service/payee before paying it, scored positively (established/clean) rather than as risk. Built entirely from VAPOR's own real settlement history for that address plus the same on-chain and reputation-provider signals `/risk-scan` uses — nothing here is guessed or seeded.
+
+`agentId` is optional and opt-in: if supplied, VAPOR looks up that [ERC-8004](https://github.com/erc-8004/erc-8004-contracts) agent's on-chain claimed wallet and only trusts/reports the enrichment if it actually matches `:address`. An address with no supplied `agentId` gets no `erc8004` field at all — VAPOR never reverse-looks-up or guesses an agentId on its own (no such lookup exists on-chain).
+
+```json
+{
+  "payTo": "0x...",
+  "score": 65,
+  "band": "established",
+  "history": {
+    "totalVerifyRequests": 40,
+    "totalSettlements": 38,
+    "settlementSuccessRate": 0.95,
+    "totalSettledVolumeUsd": 12.4,
+    "firstSeenAt": "2026-05-01T00:00:00.000Z"
+  },
+  "flaggedByReputationProvider": false,
+  "reasons": ["has 38 completed settlement(s)", "active for 30+ days"],
+  "checkedAt": "...",
+  "erc8004": { "agentId": "42", "verified": true, "feedbackCount": 12, "averageScore": 0.8 }
+}
+```
+
 ## GET /analytics/:payTo
 
 Requires header `x-api-key: <one of API_KEYS>` when `API_KEYS` is configured.

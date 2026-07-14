@@ -26,6 +26,20 @@ payeeReputationRouter.get("/payee-reputation/:address", async (req, res) => {
     return;
   }
 
-  const reputation = await scorePayee(network, address);
+  // Opt-in ERC-8004 enrichment: only attempted when the caller supplies an
+  // agentId, and only trusted after verifying on-chain that the agentId's
+  // claimed wallet actually matches this address (see payee-reputation.service).
+  let claimedAgentId: bigint | undefined;
+  if (req.query.agentId !== undefined) {
+    try {
+      claimedAgentId = BigInt(String(req.query.agentId));
+      if (claimedAgentId < 0n) throw new Error("negative");
+    } catch {
+      res.status(400).json({ error: "malformed ?agentId= (expected a non-negative integer)" });
+      return;
+    }
+  }
+
+  const reputation = await scorePayee(network, address, claimedAgentId);
   res.status(200).json(reputation);
 });

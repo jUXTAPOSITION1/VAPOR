@@ -74,4 +74,12 @@ describe("VAPOR API", () => {
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty("error");
   });
+
+  it("GET /payee-reputation/:address rejects a malformed ?agentId= before any chain work", async () => {
+    const res = await request(app).get(
+      "/payee-reputation/0x3333333333333333333333333333333333333333?network=eip155:8453&agentId=not-a-number"
+    );
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty("error");
+  });
 });

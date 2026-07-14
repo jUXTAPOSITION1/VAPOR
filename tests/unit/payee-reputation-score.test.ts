@@ -102,4 +102,42 @@ describe("computePayeeReputation", () => {
     expect(a.score).toBe(b.score);
     expect(a.band).toBe(b.band);
   });
+
+  it("omits erc8004 entirely when no agentId was supplied", () => {
+    const result = computePayeeReputation(payTo, baseOnChain, null, noHistory);
+    expect(result.erc8004).toBeUndefined();
+  });
+
+  it("bonuses a verified ERC-8004 agent with positive feedback", () => {
+    const result = computePayeeReputation(payTo, baseOnChain, null, noHistory, {
+      agentId: "42",
+      verified: true,
+      feedbackCount: 12,
+      averageScore: 0.8,
+    });
+    expect(result.score).toBe(15);
+    expect(result.erc8004).toEqual({ agentId: "42", verified: true, feedbackCount: 12, averageScore: 0.8 });
+    expect(result.reasons.some((r) => r.includes("ERC-8004"))).toBe(true);
+  });
+
+  it("gives no bonus for a verified ERC-8004 agent with zero feedback yet", () => {
+    const result = computePayeeReputation(payTo, baseOnChain, null, noHistory, {
+      agentId: "42",
+      verified: true,
+      feedbackCount: 0,
+      averageScore: null,
+    });
+    expect(result.score).toBe(0);
+  });
+
+  it("gives no bonus and surfaces the mismatch when the claimed agentId isn't verified", () => {
+    const result = computePayeeReputation(payTo, baseOnChain, null, noHistory, {
+      agentId: "42",
+      verified: false,
+      feedbackCount: 0,
+      averageScore: null,
+    });
+    expect(result.score).toBe(0);
+    expect(result.erc8004?.verified).toBe(false);
+  });
 });

@@ -77,6 +77,7 @@ Deploys automatically to an Oracle Cloud compute instance on every push to `main
 | `/settle` | POST | none (public x402 handshake) | Re-verify and broadcast `transferWithAuthorization` on-chain |
 | `/supported` | GET | none | List active `scheme`/`network` combinations |
 | `/risk-scan/:address` | GET | none | Score any address on-demand, outside a payment flow |
+| `/payee-reputation/:address` | GET | none | Score a payee/service (the mirror of `/risk-scan`); optional `?agentId=` opts into ERC-8004 reputation enrichment |
 | `/stats` | GET | none | Public, platform-wide aggregate metrics (powers the live dashboard) |
 | `/analytics/:payTo` | GET | API key | Aggregate stats for a payee |
 | `/analytics/:payTo/export` | GET | API key | Full audit log export (`?format=json\|csv`) |

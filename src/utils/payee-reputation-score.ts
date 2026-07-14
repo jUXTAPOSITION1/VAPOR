@@ -10,6 +10,16 @@ export interface PayeeHistory {
   firstSeenAt: string | null;
 }
 
+/** Result of an opt-in ERC-8004 lookup — see erc8004.client.ts. `verified`
+ * is false when the caller-supplied agentId's on-chain wallet doesn't
+ * actually match payTo, in which case it contributes no score bonus. */
+export interface Erc8004Check {
+  agentId: string;
+  verified: boolean;
+  feedbackCount: number;
+  averageScore: number | null;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -25,7 +35,8 @@ export function computePayeeReputation(
   payTo: `0x${string}`,
   onChain: OnChainSignal,
   reputation: ReputationSignal | null,
-  history: PayeeHistory
+  history: PayeeHistory,
+  erc8004?: Erc8004Check
 ): PayeeReputation {
   let score = 0;
   const reasons: string[] = [];
@@ -56,6 +67,13 @@ export function computePayeeReputation(
   ) {
     score += 10;
     reasons.push(`${Math.round(history.settlementSuccessRate * 100)}% settlement success rate`);
+  }
+
+  if (erc8004?.verified && erc8004.feedbackCount > 0 && erc8004.averageScore !== null && erc8004.averageScore > 0) {
+    score += 15;
+    reasons.push(
+      `verified ERC-8004 agent with ${erc8004.feedbackCount} feedback record(s), avg score ${erc8004.averageScore.toFixed(2)}`
+    );
   }
 
   score = Math.min(100, score);
@@ -96,5 +114,6 @@ export function computePayeeReputation(
     flaggedByReputationProvider,
     reasons,
     checkedAt: new Date().toISOString(),
+    ...(erc8004 ? { erc8004 } : {}),
   };
 }

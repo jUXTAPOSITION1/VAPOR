@@ -107,4 +107,14 @@ export interface PayeeReputation {
   flaggedByReputationProvider: boolean;
   reasons: string[];
   checkedAt: string;
+  /** Opt-in only: present when the caller supplied an ERC-8004 agentId
+   * (via ?agentId=) AND that agentId's on-chain claimed wallet actually
+   * matches payTo. VAPOR never guesses or reverse-looks-up an agentId —
+   * an address with no claimed agentId simply has no erc8004 field. */
+  erc8004?: {
+    agentId: string;
+    verified: boolean;
+    feedbackCount: number;
+    averageScore: number | null;
+  };
 }
