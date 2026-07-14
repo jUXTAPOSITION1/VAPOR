@@ -2,6 +2,10 @@
 
 VAPOR scores every payer address before a policy decision is made. The scoring function (`src/utils/risk-score.ts`) is pure and deterministic — no I/O, fully unit-tested, and documented here in full so a payee can reason about exactly what a score means rather than trusting an opaque number.
 
+## Caching
+
+A scan's result is cached per `(network, address)` for 3 seconds — long enough to dedupe the extremely common case of `/settle` re-scanning the same payer immediately after `/verify` already did, without the signal going meaningfully stale. This is a real in-flight-request cache (keyed on the Promise, not just the resolved value), so two calls arriving at the same moment for the same address share one fetch rather than racing two identical ones. A failed scan is never cached — the next call always retries fresh rather than reusing the failure for the rest of the window.
+
 ## Signals
 
 ### On-chain (always available, no external dependency)

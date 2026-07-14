@@ -3,6 +3,7 @@ import { config } from "./config/index.js";
 import { activeNetworks } from "./config/networks.js";
 import { logger } from "./utils/logger.js";
 import { retryDueWebhooks } from "./core/webhooks/webhook.service.js";
+import { sweepExpiredScanCacheEntries } from "./core/risk/risk-scanner.service.js";
 
 const app = createApp();
 
@@ -29,3 +30,10 @@ setInterval(() => {
     logger.error({ err }, "webhook retry tick failed");
   });
 }, 10_000);
+
+// Bounds the risk-scan result cache's memory footprint over a long-running
+// process's lifetime — an address scanned once and never again would
+// otherwise sit in the map forever (see risk-scanner.service.ts).
+setInterval(() => {
+  sweepExpiredScanCacheEntries();
+}, 30_000);
