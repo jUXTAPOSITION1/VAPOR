@@ -87,6 +87,28 @@ Same request shape as `/verify`. Re-runs the full verification pipeline against 
 
 Only networks with both an RPC URL configured and a verified token entry in `src/config/networks.ts` appear here.
 
+## GET /stats
+
+Public, unauthenticated, platform-wide aggregates — no payee or payer addresses, safe to expose to a public dashboard. Cached for 5 seconds server-side.
+
+```json
+{
+  "generatedAt": "2026-07-14T04:21:15.000Z",
+  "uptimeSeconds": 3600,
+  "networks": ["eip155:8453"],
+  "totals": {
+    "verifyRequests": 128,
+    "settleRequests": 95,
+    "validVerifyCount": 120,
+    "settledCount": 90,
+    "settledVolumeRaw": "95000000",
+    "settledVolumeUsd": 95
+  },
+  "averageRiskScore": 14.2,
+  "riskBandCounts": { "low": 100, "medium": 20, "high": 5 }
+}
+```
+
 ## GET /risk-scan/:address?network=eip155:8453
 
 Runs the risk scanner outside of a payment flow — useful for pre-screening at signup or quote time.

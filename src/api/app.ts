@@ -6,6 +6,7 @@ import { settleRouter } from "./routes/settle.route.js";
 import { supportedRouter } from "./routes/supported.route.js";
 import { riskScanRouter } from "./routes/risk-scan.route.js";
 import { analyticsRouter } from "./routes/analytics.route.js";
+import { statsRouter } from "./routes/stats.route.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 
 export function createApp() {
@@ -15,6 +16,17 @@ export function createApp() {
   app.use(express.json({ limit: "256kb" }));
   app.use(pinoHttp({ logger }));
 
+  // No auth here relies on cookies/sessions (API keys are a header, checked
+  // per-route), so a wildcard origin is safe — this just lets the public
+  // dashboard (served from a different origin) read responses in-browser.
+  app.use((_req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
+    next();
+  });
+  app.options("*", (_req, res) => res.sendStatus(204));
+
   app.get("/healthz", (_req, res) => {
     res.status(200).json({ status: "ok" });
   });
@@ -23,6 +35,7 @@ export function createApp() {
   app.use(settleRouter);
   app.use(supportedRouter);
   app.use(riskScanRouter);
+  app.use(statsRouter);
   app.use(analyticsRouter);
 
   app.use((_req, res) => {

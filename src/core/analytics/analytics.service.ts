@@ -1,4 +1,7 @@
 import { prisma } from "../../storage/prisma.client.js";
+import { activeNetworks } from "../../config/networks.js";
+
+const processStartedAt = Date.now();
 
 export interface PayeeSummary {
   payTo: string;
@@ -49,6 +52,83 @@ export async function getPayeeSummary(payTo: string): Promise<PayeeSummary> {
     settledCount,
     totalSettledVolume: settledVolume.toString(),
     averageRiskScore: riskScoreCount > 0 ? riskScoreSum / riskScoreCount : null,
+    riskBandCounts,
+  };
+}
+
+export interface PlatformStats {
+  generatedAt: string;
+  uptimeSeconds: number;
+  networks: string[];
+  totals: {
+    verifyRequests: number;
+    settleRequests: number;
+    validVerifyCount: number;
+    settledCount: number;
+    settledVolumeRaw: string;
+    settledVolumeUsd: number;
+  };
+  averageRiskScore: number | null;
+  riskBandCounts: Record<string, number>;
+}
+
+/**
+ * Platform-wide aggregate stats — the data behind VAPOR's public live
+ * dashboard. Deliberately never includes payTo/payer addresses or anything
+ * payee-specific; this is the one analytics surface meant to be public and
+ * unauthenticated. Uses count/groupBy aggregates rather than pulling every
+ * row, since (unlike a single payee's history) this table only grows.
+ */
+export async function getPlatformStats(): Promise<PlatformStats> {
+  const [verifyRequests, settleRequests, validVerifyCount, settledCount, riskAvg, riskBandGroups, settledAmounts] =
+    await Promise.all([
+      prisma.paymentRecord.count({ where: { stage: "verify" } }),
+      prisma.paymentRecord.count({ where: { stage: "settle" } }),
+      prisma.paymentRecord.count({ where: { stage: "verify", isValid: true } }),
+      prisma.paymentRecord.count({ where: { stage: "settle", settled: true } }),
+      prisma.paymentRecord.aggregate({ _avg: { riskScore: true }, where: { riskScore: { not: null } } }),
+      prisma.paymentRecord.groupBy({
+        by: ["riskBand"],
+        _count: { riskBand: true },
+        where: { riskBand: { not: null } },
+      }),
+      prisma.paymentRecord.findMany({
+        where: { stage: "settle", settled: true },
+        select: { amount: true },
+      }),
+    ]);
+
+  let settledVolumeRaw = 0n;
+  for (const { amount } of settledAmounts) {
+    try {
+      settledVolumeRaw += BigInt(amount);
+    } catch {
+      // malformed stored amount — skip rather than throw off the whole summary
+    }
+  }
+
+  const riskBandCounts: Record<string, number> = {};
+  for (const group of riskBandGroups) {
+    if (group.riskBand) riskBandCounts[group.riskBand] = group._count.riskBand;
+  }
+
+  // USDC is the only supported asset today, always 6 decimals — see
+  // src/config/networks.ts. Revisit if a non-6-decimal asset is added.
+  const settledVolumeUsd = Number(settledVolumeRaw) / 1_000_000;
+
+  return {
+    generatedAt: new Date().toISOString(),
+    uptimeSeconds: Math.floor((Date.now() - processStartedAt) / 1000),
+    networks: activeNetworks().map((n) => n.caip2),
+    totals: {
+      verifyRequests,
+      settleRequests,
+      validVerifyCount,
+      settledCount,
+      settledVolumeRaw: settledVolumeRaw.toString(),
+      settledVolumeUsd,
+    },
+    averageRiskScore: riskAvg._avg.riskScore,
     riskBandCounts,
   };
 }

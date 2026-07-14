@@ -34,4 +34,19 @@ describe("VAPOR API", () => {
     const res = await request(app).get("/does-not-exist");
     expect(res.status).toBe(404);
   });
+
+  it("GET /stats returns platform-wide aggregates with no payee-specific data", async () => {
+    const res = await request(app).get("/stats");
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("totals");
+    expect(res.body.totals).toHaveProperty("verifyRequests");
+    expect(res.body.totals).toHaveProperty("settledVolumeUsd");
+    expect(res.body).not.toHaveProperty("payTo");
+    expect(res.body).not.toHaveProperty("payer");
+  });
+
+  it("responses include a wildcard CORS header for public dashboard consumption", async () => {
+    const res = await request(app).get("/stats");
+    expect(res.headers["access-control-allow-origin"]).toBe("*");
+  });
 });
