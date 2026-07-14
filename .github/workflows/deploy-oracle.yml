@@ -20,18 +20,20 @@ jobs:
       - name: Build image for scanning
         run: docker build -t vapor:scan .
 
-      # Pinned to a commit SHA, not the mutable "v0.30.0" tag — same
-      # convention already used for cloudflare/wrangler-action elsewhere in
-      # this project, for the same reason the Docker base image above is
-      # pinned by digest rather than a tag.
+      # Installs the trivy binary directly rather than using
+      # aquasecurity/trivy-action — that action's v0.30.0 release
+      # internally references aquasecurity/setup-trivy@v0.2.2, a tag GitHub
+      # can no longer resolve, breaking the job before any of our own steps
+      # run. Fetches install.sh from the SAME release tag being installed
+      # (not the mutable `main` branch) so the installer script itself is
+      # pinned too.
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v0.69.0/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v0.69.0
+
       - name: Scan for OS-package and dependency vulnerabilities
-        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
-        with:
-          image-ref: vapor:scan
-          format: table
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          exit-code: "1"
+        run: trivy image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 vapor:scan
 
   deploy:
     needs: [test, container-scan]
