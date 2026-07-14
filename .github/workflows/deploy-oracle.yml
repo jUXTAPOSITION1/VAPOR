@@ -20,26 +20,21 @@ jobs:
       - name: Build image for scanning
         run: docker build -t vapor:scan .
 
-      # Downloads and verifies the trivy release directly rather than using
-      # aquasecurity/trivy-action (its v0.30.0 release internally references
-      # aquasecurity/setup-trivy@v0.2.2, a tag GitHub can no longer resolve)
-      # or the project's own install.sh (fails silently in this runner
-      # environment for reasons its own output doesn't surface). A plain
-      # curl + checksum verification is fully transparent: any failure here
-      # shows the real HTTP status or a checksum mismatch, not an opaque
-      # "exit code 1" from a third-party script's internals.
-      - name: Install Trivy
-        run: |
-          mkdir -p "$RUNNER_TEMP/bin"
-          cd "$RUNNER_TEMP"
-          curl -fsSL -O "https://github.com/aquasecurity/trivy/releases/download/v0.69.0/trivy_0.69.0_Linux-64bit.tar.gz"
-          curl -fsSL -O "https://github.com/aquasecurity/trivy/releases/download/v0.69.0/trivy_0.69.0_checksums.txt"
-          grep "trivy_0.69.0_Linux-64bit.tar.gz" trivy_0.69.0_checksums.txt | sha256sum -c -
-          tar -xzf trivy_0.69.0_Linux-64bit.tar.gz -C "$RUNNER_TEMP/bin" trivy
-          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
-
+      # Runs trivy via its own official Docker image (Docker-in-Docker over
+      # the shared socket) rather than installing a binary — sidesteps two
+      # dead ends: aquasecurity/trivy-action's v0.30.0 release internally
+      # references aquasecurity/setup-trivy@v0.2.2, a tag GitHub can no
+      # longer resolve; and trivy's own GitHub Releases no longer attach a
+      # standalone Linux binary tarball for this version (confirmed —
+      # release page shows only the 2 auto-generated source archives).
+      # Pinned to the image's digest, not the mutable "0.69.0" tag, same
+      # reasoning as the other pins in this project.
       - name: Scan for OS-package and dependency vulnerabilities
-        run: trivy image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 vapor:scan
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy@sha256:13a400393ac3714e9ff12f95ae3ac29b28bd8fe3796bc492fa70a8ed2920fb99 \
+            image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 vapor:scan
 
   deploy:
     needs: [test, container-scan]
