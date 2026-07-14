@@ -26,6 +26,7 @@ Payment verification and settlement are table stakes — any facilitator does th
 - **Webhook Event System** — real-time, HMAC-signed delivery of `payment.verified`, `payment.denied`, `payment.settled`, and `payment.settlement_failed` events to a payee's own endpoint, backed by a persisted retry queue so a payee's temporary outage never silently drops events.
 - **Payee Reputation (the mirror)** — `GET /payee-reputation/:address` scores a *service*, not just a payer, with an opt-in ERC-8004 on-chain reputation enrichment.
 - **Multi-Chain Ready** — network and token configuration is data-driven (`src/config/networks.ts`); adding a chain means adding a verified entry, not rewriting the verification or settlement pipeline.
+- **x402 Bazaar-compatible discovery** — VAPOR is a discoverable facilitator in its own right: `POST /discovery/register` + `GET /discovery/resources[/search]` speak the same `DiscoveryResource` wire format a real Bazaar client already expects, via an explicit registration contract rather than another facilitator's undocumented, observably-broken traffic-sniffing one (see [`docs/API.md`](docs/API.md#discovery-x402-bazaar)).
 - **Zero facilitator fees.** VAPOR doesn't take a cut of settled payments.
 
 ## How it works
@@ -94,6 +95,9 @@ Deploys automatically to an Oracle Cloud compute instance on every push to `main
 | `/analytics/:payTo` | GET | API key | Aggregate stats for a payee |
 | `/analytics/:payTo/export` | GET | API key | Full audit log export (`?format=json\|csv`) |
 | `/metrics` | GET | API key | Prometheus-format operational metrics (latency, verify/settle outcomes, risk score distribution, webhook delivery health) |
+| `/discovery/register` | POST | API key | Register/refresh a resource server's x402 Bazaar discovery listing |
+| `/discovery/resources` | GET | none | List discoverable resources (Bazaar-client-facing) |
+| `/discovery/resources/search` | GET | none | Search discoverable resources by natural-language query |
 | `/healthz` | GET | none | Liveness check |
 
 Full request/response shapes: [`docs/API.md`](docs/API.md). Risk-scoring methodology: [`docs/RISK_SCANNING.md`](docs/RISK_SCANNING.md).

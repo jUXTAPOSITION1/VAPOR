@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const hexString = z.string().regex(/^0x[0-9a-fA-F]*$/, "must be a 0x-prefixed hex string");
-const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/, "must be a 0x-prefixed 20-byte address");
+export const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/, "must be a 0x-prefixed 20-byte address");
 
 const exactEvmAuthorizationSchema = z.object({
   from: address,
@@ -24,7 +24,7 @@ const paymentPayloadSchema = z.object({
   payload: exactEvmPayloadSchema,
 });
 
-const paymentRequirementsSchema = z.object({
+export const paymentRequirementsSchema = z.object({
   scheme: z.literal("exact"),
   network: z.string().min(1),
   maxAmountRequired: z.string().regex(/^\d+$/),

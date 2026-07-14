@@ -78,3 +78,46 @@ model WebhookDelivery {
 
   @@index([status, nextAttemptAt])
 }
+
+/// A resource server's self-declared x402 Bazaar discovery listing — VAPOR
+/// acting as a Bazaar-compatible facilitator in its own right (see
+/// docs/API.md's Discovery section), not dependent on any other
+/// facilitator's catalog. Upserted via POST /discovery/register (API-key
+/// gated, scoped to the listing's own payTo — see auth.middleware.ts),
+/// read via GET /discovery/resources[/search], which any x402 Bazaar
+/// client (e.g. `withBazaar()` from @x402/extensions/bazaar) can query
+/// directly against VAPOR the same way it would against CDP's facilitator.
+model ResourceListing {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// The route/URL this listing advertises (e.g. "https://api.example.com/data/token_intel").
+  resource    String
+  type        String @default("http") // "http" | "mcp" — matches the x402 Bazaar spec's DiscoveryResource.type
+  x402Version Int
+
+  /// Denormalized from `accepts` for filtering/indexing without parsing JSON
+  /// on every list/search call — the source of truth is still `accepts`.
+  payTo   String
+  scheme  String
+  network String
+
+  accepts String // JSON-encoded PaymentRequirements[] — the real accepted payment kind(s)
+
+  description String?
+  mimeType    String?
+  serviceName String?
+  tags        String? // JSON-encoded string[]
+  iconUrl     String?
+  extensions  String? // JSON-encoded Record<string, unknown> — the declared bazaar extension payload
+
+  /// Soft-unlist flag: a resource server re-registers with `discoverable:
+  /// false` to pull a listing without needing a separate delete endpoint.
+  discoverable Boolean @default(true)
+
+  @@unique([resource, payTo])
+  @@index([payTo])
+  @@index([scheme, network])
+  @@index([discoverable])
+}

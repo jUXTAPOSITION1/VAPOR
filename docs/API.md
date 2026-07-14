@@ -260,6 +260,102 @@ or, if tampering is detected:
 { "ok": false, "checkedRecords": 4213, "brokenAtSeq": 1780, "reason": "stored recordHash does not match recomputed hash — row content was altered after being written" }
 ```
 
+## Discovery (x402 Bazaar)
+
+VAPOR is a Bazaar-compatible facilitator in its own right — any x402 Bazaar
+client (e.g. `withBazaar()` from `@x402/extensions/bazaar`) can query
+`GET /discovery/resources` or `/discovery/resources/search` against VAPOR
+directly, the same way it would against another facilitator's catalog.
+Response shapes match `DiscoveryResource` / `DiscoveryResourcesResponse` /
+`SearchDiscoveryResourcesResponse` from that package field-for-field.
+
+Unlike a traffic-sniffing registration model (undocumented, and observably
+broken even for correctly-configured services on at least one other
+facilitator — see [x402-foundation/x402#2112](https://github.com/x402-foundation/x402/issues/2112)),
+a resource server registers explicitly and gets a definite result back.
+
+### POST /discovery/register
+
+Registers (or refreshes) one resource server's own listing. Requires
+header `x-api-key: <one of API_KEYS>` when `API_KEYS` is configured — same
+gate as `/analytics/:payTo`: a `payTo`-scoped key can only register
+listings whose `accepts` entries pay to that same address.
+
+**Request**
+
+```json
+{
+  "resource": "https://example.com/data/token_intel",
+  "x402Version": 1,
+  "accepts": [
+    {
+      "scheme": "exact",
+      "network": "eip155:8453",
+      "maxAmountRequired": "10000",
+      "resource": "https://example.com/data/token_intel",
+      "payTo": "0x...",
+      "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    }
+  ],
+  "description": "Token price + confidence, oracle-derived age",
+  "serviceName": "ExampleAgent",
+  "tags": ["price-oracle", "token"],
+  "iconUrl": "https://example.com/icon.png",
+  "discoverable": true
+}
+```
+
+Every entry in `accepts` must agree on `payTo` — a listing is stored as one
+row keyed by one payTo; a resource that genuinely pays out to different
+addresses under different schemes needs a separate listing per payTo.
+Re-registering the same `resource` (scoped to the same `payTo`) refreshes
+the existing listing rather than duplicating it. Send `discoverable: false`
+to soft-unlist a resource without a separate delete call.
+
+**Response** — the stored `DiscoveryResource`, `200`.
+
+### GET /discovery/resources?type=&payTo=&scheme=&network=&extensions=&limit=&offset=
+
+Lists discoverable resources, most-recently-updated first. Public,
+unauthenticated (any Bazaar client needs to query this with no credential),
+rate-limited like `/risk-scan`/`/payee-reputation` (own budget, not shared
+with them — see `rate-limit.middleware.ts`).
+
+```json
+{
+  "x402Version": 1,
+  "items": [
+    {
+      "resource": "https://example.com/data/token_intel",
+      "type": "http",
+      "x402Version": 1,
+      "accepts": [{ "...": "..." }],
+      "lastUpdated": "2026-07-14T20:00:00.000Z",
+      "description": "Token price + confidence, oracle-derived age",
+      "serviceName": "ExampleAgent",
+      "tags": ["price-oracle", "token"]
+    }
+  ],
+  "pagination": { "limit": 50, "offset": 0, "total": 1 }
+}
+```
+
+### GET /discovery/resources/search?query=&type=&payTo=&scheme=&network=&extensions=&limit=
+
+Deterministic, rule-based search: a listing matches when every
+whitespace-separated term in `query` appears (case-insensitively) in its
+`description`, `serviceName`, or `tags` — no embeddings, no fabricated
+relevance score. `partialResults: true` when more listings matched than
+`limit` allowed through.
+
+```json
+{
+  "x402Version": 1,
+  "resources": [{ "...": "..." }],
+  "partialResults": false
+}
+```
+
 ## Per-payee policy overrides (`paymentRequirements.extra.policy`)
 
 | Field | Default | Meaning |

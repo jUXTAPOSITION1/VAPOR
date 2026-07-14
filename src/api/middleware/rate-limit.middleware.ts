@@ -47,3 +47,20 @@ export const scanRateLimit = rateLimit({
   legacyHeaders: false,
   message: { error: "rate limit exceeded, slow down" },
 });
+
+/**
+ * GET /discovery/resources[/search] — public, unauthenticated reads (any
+ * x402 Bazaar client needs to query these with no credential), but a plain
+ * DB read rather than an RPC- or vendor-cost-bearing one like scanRateLimit's
+ * two routes, so it gets its own instance instead of sharing that one's
+ * budget (see scanRateLimit's docstring on why it's deliberately scoped to
+ * exactly those two routes). Same per-IP, in-memory, route-scoped-only
+ * attachment rule as the limiters above.
+ */
+export const discoveryRateLimit = rateLimit({
+  windowMs: config.rateLimit.windowMs,
+  limit: config.rateLimit.maxScan,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "rate limit exceeded, slow down" },
+});

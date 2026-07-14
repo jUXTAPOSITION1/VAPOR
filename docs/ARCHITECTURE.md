@@ -80,8 +80,8 @@ not preconditions for one.
   leaks internals).
 - **`routes/`** — one file per endpoint: `verify`, `verify-batch`, `settle`,
   `settle-batch`, `supported`, `risk-scan`, `payee-reputation`, `stats`,
-  `analytics`, `metrics`, `audit`. See [`docs/API.md`](API.md) for full
-  request/response shapes.
+  `analytics`, `metrics`, `audit`, `discovery`. See [`docs/API.md`](API.md)
+  for full request/response shapes.
 
 ### `src/core/verification/` [OK]
 `verification.service.ts` — the deterministic checks a payment must pass
@@ -164,6 +164,23 @@ configuration rather than starting in a half-working state.
 the only layer that talks to Postgres directly; every service above goes
 through a repository, never a raw Prisma call of its own.
 
+### `src/core/discovery/` [OK]
+`discovery.service.ts` (+ `resource-listing.repository.ts`) — VAPOR acting
+as an x402 Bazaar-compatible facilitator in its own right: `registerResource()`
+upserts a resource server's self-declared listing (`POST /discovery/register`,
+gated the same way `/analytics/:payTo` is), `listResources()`/`searchResources()`
+serve `GET /discovery/resources[/search]` in the exact `DiscoveryResource`/
+`DiscoveryResourcesResponse`/`SearchDiscoveryResourcesResponse` shapes a real
+Bazaar client (`@x402/extensions/bazaar`'s `withBazaar()`) expects — verified
+directly against that package's compiled type declarations rather than
+docs.x402.org (unreachable from this build environment). Deliberately an
+explicit registration contract, not a traffic-sniffing one: see
+[x402-foundation/x402#2112](https://github.com/x402-foundation/x402/issues/2112)
+for why relying on the latter (as at least one other facilitator does) has
+observably not worked even for correctly-configured services. Search is
+deterministic substring matching over description/serviceName/tags — an
+honest, rule-based relevance signal, not a fabricated semantic one.
+
 ## Deployment [OK]
 
 ```
@@ -214,9 +231,11 @@ scanner with on-chain + optional external signals, per-payee configurable
 policy, hash-chained audit logging with export, payee analytics, HMAC-signed
 webhooks with retry, Prometheus metrics, an opt-in ERC-8004 payee-reputation
 mirror, batch verify/settle (up to 10 payments per call), signer balance
-monitoring, and per-key API scoping — all gated behind CI + a container
-vulnerability scan on every deploy.
+monitoring, per-key API scoping, and an x402 Bazaar-compatible discovery
+endpoint (`/discovery/register` + `/discovery/resources[/search]`) — all
+gated behind CI + a container vulnerability scan on every deploy.
 
 **Next:** broader network/token coverage in `src/config/networks.ts` as
-real demand appears, and registering/broadcasting VAPOR itself for
-discoverability as a facilitator (see the project roadmap).
+real demand appears, and getting real resource servers (starting with
+V.A.P.E.'s own worker) to actually register through the new discovery
+endpoint.

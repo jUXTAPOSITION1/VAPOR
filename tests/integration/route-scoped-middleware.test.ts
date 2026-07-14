@@ -56,6 +56,15 @@ describe("route-scoped middleware (API key gate + rate limiters don't leak acros
 
     const supported = await request(app).get("/supported");
     expect(supported.status).toBe(200);
+
+    // /discovery/register is the write path (attributable to one payTo) and
+    // gets the same gate as /analytics; /discovery/resources is the public
+    // Bazaar-client-facing read path and must stay open, same as /supported.
+    const registerNoKey = await request(app).post("/discovery/register").send({});
+    expect(registerNoKey.status).toBe(401);
+
+    const resourcesNoKey = await request(app).get("/discovery/resources");
+    expect(resourcesNoKey.status).toBe(200);
   });
 
   it("rate-limits only the endpoint a limiter is attached to, not sibling or later routes", async () => {
