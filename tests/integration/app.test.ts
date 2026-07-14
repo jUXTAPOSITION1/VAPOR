@@ -62,4 +62,16 @@ describe("VAPOR API", () => {
     expect(res.status).toBe(200);
     expect(res.body.hours).toBe(48);
   });
+
+  it("GET /payee-reputation/:address rejects a missing/unsupported network before any chain work", async () => {
+    const res = await request(app).get("/payee-reputation/0x3333333333333333333333333333333333333333");
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty("error");
+  });
+
+  it("GET /payee-reputation/:address rejects a malformed address before any chain work", async () => {
+    const res = await request(app).get("/payee-reputation/not-an-address?network=eip155:8453");
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty("error");
+  });
 });

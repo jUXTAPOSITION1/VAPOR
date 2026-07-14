@@ -5,6 +5,7 @@ import { verifyRouter } from "./routes/verify.route.js";
 import { settleRouter } from "./routes/settle.route.js";
 import { supportedRouter } from "./routes/supported.route.js";
 import { riskScanRouter } from "./routes/risk-scan.route.js";
+import { payeeReputationRouter } from "./routes/payee-reputation.route.js";
 import { analyticsRouter } from "./routes/analytics.route.js";
 import { statsRouter } from "./routes/stats.route.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
@@ -35,6 +36,7 @@ export function createApp() {
   app.use(settleRouter);
   app.use(supportedRouter);
   app.use(riskScanRouter);
+  app.use(payeeReputationRouter);
   app.use(statsRouter);
   app.use(analyticsRouter);
 

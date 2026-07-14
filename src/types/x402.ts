@@ -85,3 +85,26 @@ export interface RiskAssessment {
   reasons: string[];
   checkedAt: string;
 }
+
+/**
+ * VAPOR's own extension type — the mirror-image of RiskAssessment, but for
+ * the payee/service side rather than the payer. Positively framed (higher
+ * is more established/trustworthy) rather than risk-framed, because "new
+ * service with zero history" and "compromised/scam service" are different
+ * conditions a payer needs to tell apart, not points on the same scale.
+ */
+export interface PayeeReputation {
+  payTo: `0x${string}`;
+  score: number; // 0 (unknown/new) .. 100 (established, high-volume, clean)
+  band: "new" | "emerging" | "established" | "veteran";
+  history: {
+    totalVerifyRequests: number;
+    totalSettlements: number;
+    settlementSuccessRate: number | null; // settlements / verify-valid requests
+    totalSettledVolumeUsd: number;
+    firstSeenAt: string | null;
+  };
+  flaggedByReputationProvider: boolean;
+  reasons: string[];
+  checkedAt: string;
+}
