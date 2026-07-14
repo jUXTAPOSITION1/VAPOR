@@ -2,6 +2,16 @@
 
 All request/response bodies are JSON. All addresses are checksummed or lowercase 20-byte hex; amounts are base-10 integer strings in the token's smallest unit (e.g. USDC has 6 decimals, so `"1000000"` is 1.00 USDC).
 
+## Rate limiting
+
+Every endpoint below except `/healthz` and `/supported` is rate-limited per IP (`RATE_LIMIT_WINDOW_MS`, default 60s):
+
+- `/verify`, `/settle`, `/verify-batch`, `/settle-batch` — `RATE_LIMIT_MAX_PAYMENT` (default 120/window). These are unauthenticated by protocol necessity, so this is the only thing standing between them and a request flood.
+- `/risk-scan/:address`, `/payee-reputation/:address` — `RATE_LIMIT_MAX_SCAN` (default 30/window), **shared** across both routes (one combined budget per IP, not one each) — they're the cheapest RPC-cost-bearing targets on the facilitator with no payment gating them at all.
+- `/analytics/:payTo` and its `/export` sibling, `/metrics` — no separate rate limit; they're already gated by `API_KEYS`.
+
+Exceeding the limit returns `429` with `{ "error": "rate limit exceeded, slow down" }` and standard `RateLimit-*` headers (draft-7) so a well-behaved client can back off.
+
 ## POST /verify
 
 Verifies a payment payload against a set of payment requirements without moving funds.

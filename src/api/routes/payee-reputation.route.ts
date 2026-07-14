@@ -2,8 +2,15 @@ import { Router } from "express";
 import { getAddress } from "viem";
 import { resolveNetwork } from "../../config/networks.js";
 import { scorePayee } from "../../core/reputation/payee-reputation.service.js";
+import { scanRateLimit } from "../middleware/rate-limit.middleware.js";
 
 export const payeeReputationRouter = Router();
+
+// Path-scoped (see risk-scan.route.ts's comment for why: matches only
+// "/payee-reputation*", never leaks to sibling routes, and avoids breaking
+// TS's path-literal param inference the way an inline third handler
+// argument would).
+payeeReputationRouter.use("/payee-reputation", scanRateLimit);
 
 /**
  * Lets a payer pre-check a service before paying it — the mirror of

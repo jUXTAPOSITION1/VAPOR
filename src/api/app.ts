@@ -18,6 +18,12 @@ export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
+  // Production sits behind Caddy (see Caddyfile/docker-compose.yml) — one
+  // reverse-proxy hop. Without this, every request's req.ip resolves to
+  // Caddy's own address inside the Docker network, which would collapse the
+  // per-IP rate limiters below into one shared bucket for all real clients
+  // instead of limiting each one independently.
+  app.set("trust proxy", 1);
   app.use(express.json({ limit: "256kb" }));
   app.use(pinoHttp({ logger }));
 

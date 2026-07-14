@@ -7,10 +7,11 @@ import { recordSettlement } from "../../storage/repositories/payment-record.repo
 import { dispatchWebhook, webhookUrlFromExtra } from "../../core/webhooks/webhook.service.js";
 import { logger } from "../../utils/logger.js";
 import { settleOutcomesTotal } from "../../core/metrics/metrics.service.js";
+import { paymentRateLimit } from "../middleware/rate-limit.middleware.js";
 
 export const settleRouter = Router();
 
-settleRouter.post("/settle", validateBody(settleRequestSchema), async (req, res) => {
+settleRouter.post("/settle", paymentRateLimit, validateBody(settleRequestSchema), async (req, res) => {
   const { paymentPayload, paymentRequirements } = req.body as unknown as SettleRequest;
 
   const result = await settlePayment(paymentPayload, paymentRequirements);

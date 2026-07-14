@@ -7,6 +7,7 @@ import { recordSettlement } from "../../storage/repositories/payment-record.repo
 import { dispatchWebhook, webhookUrlFromExtra } from "../../core/webhooks/webhook.service.js";
 import { logger } from "../../utils/logger.js";
 import { settleOutcomesTotal } from "../../core/metrics/metrics.service.js";
+import { paymentRateLimit } from "../middleware/rate-limit.middleware.js";
 
 export const settleBatchRouter = Router();
 
@@ -26,7 +27,7 @@ export const settleBatchRouter = Router();
  * never stops the batch — each entry gets its own success/failure result,
  * exactly like calling /settle N times.
  */
-settleBatchRouter.post("/settle-batch", validateBody(batchRequestSchema), async (req, res) => {
+settleBatchRouter.post("/settle-batch", paymentRateLimit, validateBody(batchRequestSchema), async (req, res) => {
   const { payments } = req.body as unknown as BatchSettleRequest;
 
   const results = [];

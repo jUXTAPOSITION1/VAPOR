@@ -5,7 +5,11 @@ import { requireApiKey } from "../middleware/auth.middleware.js";
 
 export const analyticsRouter = Router();
 
-analyticsRouter.use(requireApiKey);
+// Path-scoped (matches only "/analytics*", never leaks to sibling routes —
+// see rate-limit.middleware.ts's docstring for the general reasoning, and
+// risk-scan.route.ts's for why this form avoids breaking TS's path-literal
+// param inference the way an inline third handler argument would).
+analyticsRouter.use("/analytics", requireApiKey);
 
 analyticsRouter.get("/analytics/:payTo", async (req, res) => {
   let payTo: string;

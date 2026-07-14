@@ -2,8 +2,19 @@ import { Router } from "express";
 import { getAddress } from "viem";
 import { resolveNetwork } from "../../config/networks.js";
 import { scanAddress } from "../../core/risk/risk-scanner.service.js";
+import { scanRateLimit } from "../middleware/rate-limit.middleware.js";
 
 export const riskScanRouter = Router();
+
+// Path-scoped (not a bare `.use(scanRateLimit)`) so it only ever matches
+// "/risk-scan*" — see rate-limit.middleware.ts's docstring on why a router-
+// level `.use()` with no path would leak onto unrelated routes. Passing the
+// limiter as a third argument directly to `.get()` below would ALSO work at
+// runtime, but breaks TypeScript's path-literal param inference for
+// `req.params.address` (every other Express handler in this repo hits the
+// same issue if a generically-typed middleware is inlined next to a
+// parameterized route) — this form avoids that entirely.
+riskScanRouter.use("/risk-scan", scanRateLimit);
 
 /**
  * Standalone access to VAPOR's risk scanner, independent of a payment

@@ -7,6 +7,7 @@ import { recordVerification } from "../../storage/repositories/payment-record.re
 import { dispatchWebhook, webhookUrlFromExtra } from "../../core/webhooks/webhook.service.js";
 import { logger } from "../../utils/logger.js";
 import { verifyOutcomesTotal } from "../../core/metrics/metrics.service.js";
+import { paymentRateLimit } from "../middleware/rate-limit.middleware.js";
 
 export const verifyBatchRouter = Router();
 
@@ -16,7 +17,7 @@ export const verifyBatchRouter = Router();
  * checks), so there's no shared mutable state between entries the way
  * settlement has (see settle-batch.route.ts).
  */
-verifyBatchRouter.post("/verify-batch", validateBody(batchRequestSchema), async (req, res) => {
+verifyBatchRouter.post("/verify-batch", paymentRateLimit, validateBody(batchRequestSchema), async (req, res) => {
   const { payments } = req.body as unknown as BatchVerifyRequest;
 
   const results = await Promise.all(

@@ -38,6 +38,14 @@ const envSchema = z.object({
 
   WEBHOOK_SIGNING_SECRET: z.string().optional(),
   API_KEYS: z.string().optional(),
+
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  // /verify, /settle, and their batch siblings are the actual payment path —
+  // a real agent may legitimately fire several per minute, so this is looser.
+  RATE_LIMIT_MAX_PAYMENT: z.coerce.number().int().positive().default(120),
+  // /risk-scan and /payee-reputation are free, unauthenticated, RPC-cost-
+  // bearing reads with no payment gating them at all — tighter by default.
+  RATE_LIMIT_MAX_SCAN: z.coerce.number().int().positive().default(30),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -70,4 +78,9 @@ export const config = {
     .split(",")
     .map((k) => k.trim())
     .filter(Boolean),
+  rateLimit: {
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    maxPayment: env.RATE_LIMIT_MAX_PAYMENT,
+    maxScan: env.RATE_LIMIT_MAX_SCAN,
+  },
 } as const;
