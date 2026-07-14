@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getAddress } from "viem";
 import { getPayeeSummary, exportAuditLog, auditLogToCsv } from "../../core/analytics/analytics.service.js";
-import { requireApiKey } from "../middleware/auth.middleware.js";
+import { requireApiKey, isPayeeAllowed } from "../middleware/auth.middleware.js";
 
 export const analyticsRouter = Router();
 
@@ -12,11 +12,16 @@ export const analyticsRouter = Router();
 analyticsRouter.use("/analytics", requireApiKey);
 
 analyticsRouter.get("/analytics/:payTo", async (req, res) => {
-  let payTo: string;
+  let payTo: `0x${string}`;
   try {
     payTo = getAddress(req.params.payTo);
   } catch {
     res.status(400).json({ error: "malformed payTo address" });
+    return;
+  }
+
+  if (!isPayeeAllowed(res, payTo)) {
+    res.status(403).json({ error: "API key is not scoped to this payTo" });
     return;
   }
 
@@ -25,11 +30,16 @@ analyticsRouter.get("/analytics/:payTo", async (req, res) => {
 });
 
 analyticsRouter.get("/analytics/:payTo/export", async (req, res) => {
-  let payTo: string;
+  let payTo: `0x${string}`;
   try {
     payTo = getAddress(req.params.payTo);
   } catch {
     res.status(400).json({ error: "malformed payTo address" });
+    return;
+  }
+
+  if (!isPayeeAllowed(res, payTo)) {
+    res.status(403).json({ error: "API key is not scoped to this payTo" });
     return;
   }
 

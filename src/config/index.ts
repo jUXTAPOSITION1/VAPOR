@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { z } from "zod";
+import { parseApiKeys } from "./api-keys.js";
 
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3402),
@@ -85,10 +86,7 @@ export const config = {
     maxAmountUsd: env.DEFAULT_MAX_AMOUNT_USD,
   },
   webhookSigningSecret: env.WEBHOOK_SIGNING_SECRET,
-  apiKeys: (env.API_KEYS ?? "")
-    .split(",")
-    .map((k) => k.trim())
-    .filter(Boolean),
+  apiKeys: parseApiKeys(env.API_KEYS ?? ""),
   rateLimit: {
     windowMs: env.RATE_LIMIT_WINDOW_MS,
     maxPayment: env.RATE_LIMIT_MAX_PAYMENT,

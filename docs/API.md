@@ -212,7 +212,7 @@ The mirror of `/risk-scan`: lets a *payer* pre-check a service/payee before payi
 
 ## GET /analytics/:payTo
 
-Requires header `x-api-key: <one of API_KEYS>` when `API_KEYS` is configured.
+Requires header `x-api-key: <one of API_KEYS>` when `API_KEYS` is configured. If the matched key is scoped to a specific `payTo` (see `.env.example`), it can only read that same payee's data here — a mismatched `:payTo` gets `403`, not another payee's numbers.
 
 ```json
 {
@@ -232,7 +232,7 @@ Full audit-log export for the given payee, optionally bounded by `createdAt`. Sa
 
 ## GET /metrics
 
-Requires header `x-api-key: <one of API_KEYS>` when `API_KEYS` is configured — same gate as `/analytics`, since this is operational detail for VAPOR's own operator, unlike the deliberately-public `/stats`.
+Requires header `x-api-key: <one of API_KEYS>` when `API_KEYS` is configured — same gate as `/analytics`, since this is operational detail for VAPOR's own operator, unlike the deliberately-public `/stats`. Unlike `/analytics`, a `payTo`-scoped key is rejected here with `403` — this endpoint covers every payee the facilitator serves, so only an unscoped key can read it.
 
 Prometheus text-exposition format (`text/plain; version=0.0.4`), scrape-ready as-is. Includes standard Node.js process metrics (CPU, memory, event loop lag, GC) via `prom-client`'s `collectDefaultMetrics`, plus VAPOR-specific instruments:
 

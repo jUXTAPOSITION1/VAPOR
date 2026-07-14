@@ -16,7 +16,7 @@ describe("requireApiKey", () => {
     const req = { header: (name: string) => (name === "x-api-key" ? headerValue : undefined) } as any;
     const json = vi.fn();
     const status = vi.fn(() => ({ json }));
-    const res = { status } as any;
+    const res = { status, locals: {} } as any;
     const next = vi.fn();
     return { req, res, next, status, json };
   }
