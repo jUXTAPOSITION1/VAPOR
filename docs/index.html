@@ -33,15 +33,15 @@
     <div class="max-w-7xl mx-auto px-5 sm:px-8 py-3.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
       <a href="#top" class="flex items-center gap-2.5 shrink-0 order-1">
         <img src="assets/favicon.svg" alt="" class="w-6 h-6 rounded">
-        <span class="text-base tracking-tight">VAPOR</span>
+        <span class="text-sm tracking-tight">VAPOR</span>
       </a>
 
       <div class="flex items-center gap-2 shrink-0 order-2 sm:order-3">
         <span id="live-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-500 live-dot"></span>
-        <span id="live-label" class="text-xs font-mono text-zinc-400">LIVE</span>
+        <span id="live-label" class="text-sm font-mono text-zinc-400">LIVE</span>
       </div>
 
-      <div class="nav-links nav-links-wrap text-[13px] text-zinc-500">
+      <div class="nav-links nav-links-wrap text-sm text-zinc-500">
         <a href="#activity" class="hover:text-zinc-100 transition">Live Activity</a>
         <a href="#differentiators" class="hover:text-zinc-100 transition">Why VAPOR</a>
         <a href="#how-it-works" class="hover:text-zinc-100 transition">How it works</a>
@@ -59,7 +59,7 @@
         <div class="inline-flex items-center eyebrow text-zinc-500 border border-white/10 rounded px-3 py-1.5 mb-4">
           [ x402 facilitator — payer risk scanning built in ]
         </div>
-        <p class="max-w-2xl text-base text-zinc-400 leading-relaxed">
+        <p class="max-w-2xl text-sm text-zinc-400 leading-relaxed">
           VAPOR verifies and settles x402 stablecoin payments over EIP-3009 — same protocol,
           zero facilitator fees — but every payer is scored before settlement, not after.
           Everything below is live, straight from the running facilitator.
@@ -77,11 +77,19 @@
         <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
           <div>
             <h2 class="section-title">&gt; Live activity</h2>
-            <p class="text-sm text-zinc-500 mt-1">Verify and settlement requests, last 48 hours — real timestamps, no simulated data.</p>
+            <p id="activity-range-label" class="text-sm text-zinc-500 mt-1">Verify and settlement requests, last 24 hours — real timestamps, no simulated data.</p>
           </div>
-          <div class="text-xs font-mono text-zinc-500">
+          <div class="text-sm font-mono text-zinc-500">
             uptime <span id="stat-uptime" class="text-zinc-300">—</span>
           </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mb-4" id="activity-range-select" role="group" aria-label="Chart time range">
+          <button type="button" class="term-btn" data-range="1d">1D</button>
+          <button type="button" class="term-btn" data-range="7d">7D</button>
+          <button type="button" class="term-btn" data-range="30d">30D</button>
+          <button type="button" class="term-btn" data-range="90d">90D</button>
+          <button type="button" class="term-btn" data-range="1y">1Y</button>
         </div>
 
         <div class="chart-shell">
@@ -155,7 +163,7 @@
         </div>
         <div class="diff-row">
           <h3 class="section-title">Webhook events</h3>
-          <p class="text-sm text-zinc-500 mt-1">HMAC-signed <span class="text-xs font-mono">payment.verified</span> / <span class="text-xs font-mono">settled</span> / <span class="text-xs font-mono">denied</span> events to your own endpoint.</p>
+          <p class="text-sm text-zinc-500 mt-1">HMAC-signed <span class="text-sm font-mono">payment.verified</span> / <span class="text-sm font-mono">settled</span> / <span class="text-sm font-mono">denied</span> events to your own endpoint.</p>
         </div>
         <div class="diff-row">
           <h3 class="section-title">Zero facilitator fees</h3>
@@ -195,7 +203,7 @@
           <div class="step-cell">
             <div class="step-num">04</div>
             <div class="text-zinc-200">Settle</div>
-            <p class="text-zinc-500 mt-1">Re-verified against live chain state, then broadcast via <span class="font-mono text-xs">transferWithAuthorization</span>.</p>
+            <p class="text-zinc-500 mt-1">Re-verified against live chain state, then broadcast via <span class="font-mono text-sm">transferWithAuthorization</span>.</p>
           </div>
         </div>
       </div>
@@ -217,7 +225,7 @@ curl -X POST https://your-vapor-instance/verify \
     "paymentRequirements": { "...": "your resource'"'"'s price and payTo address" }
   }'</code></pre>
         </div>
-        <p class="text-xs text-zinc-600 mt-3">Full request/response shapes, policy overrides, and webhook contract: <a href="https://github.com/jUXTAPOSITION1/VAPOR/blob/main/docs/API.md" class="text-zinc-400 hover:text-zinc-100">docs/API.md</a>.</p>
+        <p class="text-sm text-zinc-600 mt-3">Full request/response shapes, policy overrides, and webhook contract: <a href="https://github.com/jUXTAPOSITION1/VAPOR/blob/main/docs/API.md" class="text-zinc-400 hover:text-zinc-100">docs/API.md</a>.</p>
       </div>
     </section>
 
@@ -225,7 +233,7 @@ curl -X POST https://your-vapor-instance/verify \
 
   <!-- Footer -->
   <footer class="border-t border-white/10 mt-6">
-    <div class="max-w-7xl mx-auto px-5 sm:px-8 py-8 flex flex-wrap items-center justify-between gap-4 text-xs text-zinc-500">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 py-8 flex flex-wrap items-center justify-between gap-4 text-sm text-zinc-500">
       <div>© <span id="footer-year"></span> VAPOR — MIT licensed.</div>
       <div class="flex items-center gap-5">
         <a href="https://github.com/jUXTAPOSITION1/VAPOR" class="hover:text-zinc-300 transition">GitHub</a>

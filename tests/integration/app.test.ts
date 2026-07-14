@@ -105,6 +105,37 @@ describe("VAPOR API", () => {
     expect(res.body.hours).toBe(48);
   });
 
+  it("GET /stats/timeseries accepts a full year (8760 hours) with an explicit hours param", async () => {
+    const res = await request(app).get("/stats/timeseries?hours=8760");
+    expect(res.status).toBe(200);
+    expect(res.body.hours).toBe(8760);
+    expect(Array.isArray(res.body.points)).toBe(true);
+  });
+
+  it("GET /stats/timeseries auto-selects an hourly bucket for short ranges", async () => {
+    const res = await request(app).get("/stats/timeseries?hours=24");
+    expect(res.status).toBe(200);
+    expect(res.body.bucket).toBe("hour");
+  });
+
+  it("GET /stats/timeseries auto-selects a daily bucket beyond the one-week threshold", async () => {
+    const res = await request(app).get("/stats/timeseries?hours=720");
+    expect(res.status).toBe(200);
+    expect(res.body.bucket).toBe("day");
+  });
+
+  it("GET /stats/timeseries lets an explicit bucket param override the auto-selected default", async () => {
+    const res = await request(app).get("/stats/timeseries?hours=24&bucket=day");
+    expect(res.status).toBe(200);
+    expect(res.body.bucket).toBe("day");
+  });
+
+  it("GET /stats/timeseries ignores an invalid bucket param and falls back to auto-selection", async () => {
+    const res = await request(app).get("/stats/timeseries?hours=24&bucket=nonsense");
+    expect(res.status).toBe(200);
+    expect(res.body.bucket).toBe("hour");
+  });
+
   it("GET /payee-reputation/:address rejects a missing/unsupported network before any chain work", async () => {
     const res = await request(app).get("/payee-reputation/0x3333333333333333333333333333333333333333");
     expect(res.status).toBe(400);

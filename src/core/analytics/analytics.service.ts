@@ -154,11 +154,13 @@ export async function getPlatformStats(): Promise<PlatformStats> {
 }
 
 export interface TimeseriesPoint {
-  bucket: string; // ISO hour start, e.g. "2026-07-14T04:00:00Z"
+  bucket: string; // ISO hour or day start, e.g. "2026-07-14T04:00:00Z" or "2026-07-14T00:00:00Z"
   verifyCount: number;
   settleCount: number;
   settledVolumeUsd: number;
 }
+
+export type TimeseriesBucket = "hour" | "day";
 
 interface TimeseriesRow {
   bucket: string;
@@ -168,25 +170,43 @@ interface TimeseriesRow {
 }
 
 /**
- * Real hourly activity buckets derived directly from stored request
- * timestamps — not a fabricated or simulated series. Powers the dashboard's
- * "activity over time" chart. Uses a raw query because SQLite date
- * truncation/grouping isn't expressible through Prisma's query builder.
+ * Real activity buckets derived directly from stored request timestamps —
+ * not a fabricated or simulated series. Powers the dashboard's "activity
+ * over time" chart, at either hourly or daily granularity (daily for
+ * longer ranges — 8760 hourly buckets for a full year would be too dense
+ * to read and a heavier query than the chart needs). Uses a raw query
+ * because SQLite date truncation/grouping isn't expressible through
+ * Prisma's query builder. Two separate tagged-template queries (never
+ * string-built SQL) so bucketSize can only ever select between two fixed,
+ * literal strftime formats — no path for it to reach the query as text.
  */
-export async function getHourlyTimeseries(hours = 48): Promise<TimeseriesPoint[]> {
+export async function getTimeseries(hours = 48, bucketSize: TimeseriesBucket = "hour"): Promise<TimeseriesPoint[]> {
   const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-  const rows = await prisma.$queryRaw<TimeseriesRow[]>`
-    SELECT
-      strftime('%Y-%m-%dT%H:00:00Z', createdAt) as bucket,
-      stage,
-      COUNT(*) as count,
-      SUM(CASE WHEN stage = 'settle' AND settled = 1 THEN CAST(amount AS INTEGER) ELSE 0 END) as volume
-    FROM PaymentRecord
-    WHERE createdAt >= ${since.toISOString()}
-    GROUP BY bucket, stage
-    ORDER BY bucket ASC
-  `;
+  const rows =
+    bucketSize === "day"
+      ? await prisma.$queryRaw<TimeseriesRow[]>`
+          SELECT
+            strftime('%Y-%m-%dT00:00:00Z', createdAt) as bucket,
+            stage,
+            COUNT(*) as count,
+            SUM(CASE WHEN stage = 'settle' AND settled = 1 THEN CAST(amount AS INTEGER) ELSE 0 END) as volume
+          FROM PaymentRecord
+          WHERE createdAt >= ${since.toISOString()}
+          GROUP BY bucket, stage
+          ORDER BY bucket ASC
+        `
+      : await prisma.$queryRaw<TimeseriesRow[]>`
+          SELECT
+            strftime('%Y-%m-%dT%H:00:00Z', createdAt) as bucket,
+            stage,
+            COUNT(*) as count,
+            SUM(CASE WHEN stage = 'settle' AND settled = 1 THEN CAST(amount AS INTEGER) ELSE 0 END) as volume
+          FROM PaymentRecord
+          WHERE createdAt >= ${since.toISOString()}
+          GROUP BY bucket, stage
+          ORDER BY bucket ASC
+        `;
 
   const byBucket = new Map<string, TimeseriesPoint>();
   for (const row of rows) {

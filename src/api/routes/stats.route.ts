@@ -1,8 +1,9 @@
 import { Router } from "express";
 import {
   getPlatformStats,
-  getHourlyTimeseries,
+  getTimeseries,
   type PlatformStats,
+  type TimeseriesBucket,
   type TimeseriesPoint,
 } from "../../core/analytics/analytics.service.js";
 
@@ -21,20 +22,39 @@ statsRouter.get("/stats", async (_req, res) => {
   res.status(200).json(statsCache.stats);
 });
 
-const timeseriesCache = new Map<number, { at: number; points: TimeseriesPoint[] }>();
+// Up to 8760 hours (365 days) — a full year. Cache key includes bucket so
+// an hourly and a daily request for the same `hours` never collide.
+const MAX_TIMESERIES_HOURS = 24 * 365;
+// Beyond a week, hourly buckets (168+ points) get dense enough that daily
+// is the more readable default when the caller doesn't ask for a specific
+// granularity — this only affects the auto-selected default; an explicit
+// ?bucket= always wins.
+const AUTO_DAILY_THRESHOLD_HOURS = 24 * 7;
+
+const timeseriesCache = new Map<string, { at: number; points: TimeseriesPoint[] }>();
 const TIMESERIES_CACHE_TTL_MS = 30_000;
 
 statsRouter.get("/stats/timeseries", async (req, res) => {
   const hoursParam = Number(req.query.hours);
-  const hours = Number.isFinite(hoursParam) && hoursParam > 0 && hoursParam <= 24 * 30 ? hoursParam : 48;
+  const hours =
+    Number.isFinite(hoursParam) && hoursParam > 0 && hoursParam <= MAX_TIMESERIES_HOURS ? hoursParam : 48;
 
-  const cached = timeseriesCache.get(hours);
+  const bucketParam = String(req.query.bucket ?? "");
+  const bucket: TimeseriesBucket =
+    bucketParam === "hour" || bucketParam === "day"
+      ? bucketParam
+      : hours > AUTO_DAILY_THRESHOLD_HOURS
+        ? "day"
+        : "hour";
+
+  const cacheKey = `${hours}:${bucket}`;
+  const cached = timeseriesCache.get(cacheKey);
   if (cached && Date.now() - cached.at <= TIMESERIES_CACHE_TTL_MS) {
-    res.status(200).json({ hours, points: cached.points });
+    res.status(200).json({ hours, bucket, points: cached.points });
     return;
   }
 
-  const points = await getHourlyTimeseries(hours);
-  timeseriesCache.set(hours, { at: Date.now(), points });
-  res.status(200).json({ hours, points });
+  const points = await getTimeseries(hours, bucket);
+  timeseriesCache.set(cacheKey, { at: Date.now(), points });
+  res.status(200).json({ hours, bucket, points });
 });

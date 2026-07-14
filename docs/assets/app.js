@@ -7,6 +7,18 @@ const API_BASE = "https://x402.duckdns.org";
 const STATS_POLL_MS = 8000;
 const TIMESERIES_POLL_MS = 30000;
 
+// Range selector state — hours sent to the backend; bucket is left for the
+// API to auto-select (hourly under a week, daily beyond) except where an
+// explicit choice reads better for that window.
+const RANGES = {
+  "1d": { hours: 24, bucket: "hour", label: "last 24 hours" },
+  "7d": { hours: 24 * 7, bucket: "hour", label: "last 7 days" },
+  "30d": { hours: 24 * 30, bucket: "day", label: "last 30 days" },
+  "90d": { hours: 24 * 90, bucket: "day", label: "last 90 days" },
+  "1y": { hours: 24 * 365, bucket: "day", label: "last year" },
+};
+let activeRange = "1d";
+
 const fmtInt = (n) => Number(n ?? 0).toLocaleString("en-US");
 const fmtUsd = (n) =>
   Number(n ?? 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
@@ -124,12 +136,14 @@ function renderRiskChart(riskBandCounts) {
 // Plain thin lines, no fill/gradient — verify in near-white, settle in the
 // site's one accent color, so the two series read clearly against a flat
 // background instead of a glowing area chart.
-function renderActivityChart(points) {
+function renderActivityChart(points, bucket) {
   const canvas = document.getElementById("activity-chart");
   if (!canvas || typeof Chart === "undefined") return;
 
   const labels = points.map((p) =>
-    new Date(p.bucket).toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
+    bucket === "day"
+      ? new Date(p.bucket).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      : new Date(p.bucket).toLocaleTimeString("en-US", { hour: "numeric", hour12: true })
   );
   const verify = points.map((p) => p.verifyCount);
   const settle = points.map((p) => p.settleCount);
@@ -199,14 +213,34 @@ async function pollStats() {
 }
 
 async function pollTimeseries() {
+  const range = RANGES[activeRange] ?? RANGES["1d"];
   try {
-    const res = await fetch(`${API_BASE}/stats/timeseries?hours=48`);
+    const res = await fetch(`${API_BASE}/stats/timeseries?hours=${range.hours}&bucket=${range.bucket}`);
     if (!res.ok) throw new Error(`timeseries ${res.status}`);
     const body = await res.json();
-    renderActivityChart(body.points ?? []);
+    renderActivityChart(body.points ?? [], body.bucket ?? range.bucket);
   } catch (err) {
     console.error("timeseries poll failed", err);
   }
+}
+
+function setActiveRange(key) {
+  if (!RANGES[key] || key === activeRange) return;
+  activeRange = key;
+  setText("activity-range-label", `Verify and settlement requests, ${RANGES[key].label} — real timestamps, no simulated data.`);
+  document.querySelectorAll("#activity-range-select [data-range]").forEach((btn) => {
+    btn.classList.toggle("term-btn-active", btn.dataset.range === key);
+  });
+  pollTimeseries();
+}
+
+function initRangeSelector() {
+  const container = document.getElementById("activity-range-select");
+  if (!container) return;
+  container.querySelectorAll("[data-range]").forEach((btn) => {
+    if (btn.dataset.range === activeRange) btn.classList.add("term-btn-active");
+    btn.addEventListener("click", () => setActiveRange(btn.dataset.range));
+  });
 }
 
 function initScrollReveal() {
@@ -236,6 +270,7 @@ function initYear() {
 document.addEventListener("DOMContentLoaded", () => {
   initScrollReveal();
   initYear();
+  initRangeSelector();
   pollStats();
   pollTimeseries();
   setInterval(pollStats, STATS_POLL_MS);

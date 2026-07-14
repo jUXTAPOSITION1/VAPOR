@@ -14,30 +14,31 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Monospace only — no separate display face for headings/wordmark. This
-   is a terminal instrument panel, not a marketing site: every heading,
-   label, and number is set in the same face the live data itself uses,
-   at the same size and weight as body copy (see .section-title). */
+/* Monospace only — no separate display face for headings/wordmark. Every
+   heading, label, and number is set at the exact size/weight/color of the
+   Quickstart section's code block (text-sm, zinc-300, regular weight) —
+   one uniform "terminal output" register for the whole page, no separate
+   type scale for "titles" vs body copy. */
 body {
   background: var(--bg);
   font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.875rem;
+  color: #d4d4d8;
   -webkit-font-smoothing: antialiased;
 }
 
 .font-mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
 
 .eyebrow {
-  font-size: 0.6875rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.875rem;
 }
 
-/* Section headings: same size/weight as description text on purpose — a
-   "> " prompt prefix marks it as a heading instead of bold/oversized type. */
+/* Section headings: same size/weight/color as the Quickstart code block —
+   a "> " prompt prefix marks it as a heading instead of bold/oversized type. */
 .section-title {
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 400;
-  color: #f4f4f5;
+  color: #d4d4d8;
   letter-spacing: 0;
 }
 
@@ -58,11 +59,15 @@ body {
   padding: 0.5rem 1.1rem;
   border: 1px solid var(--border);
   color: #e4e4e7;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   transition: border-color 0.15s ease, color 0.15s ease;
 }
 .term-btn:hover {
   border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+.term-btn-active {
+  border-color: #d4d4d8;
   color: #fff;
 }
 
@@ -118,18 +123,14 @@ body {
   display: inline-flex;
   align-items: baseline;
   gap: 0.5rem;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 .stat-label {
   color: #71717a;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-size: 0.6875rem;
 }
 .stat-value {
-  color: #f4f4f5;
+  color: #d4d4d8;
   font-variant-numeric: tabular-nums;
-  font-size: 0.9375rem;
 }
 
 /* "How the score is built" rows — a plain tag + description, no bullet
@@ -142,9 +143,6 @@ body {
 }
 .score-tag {
   color: #a1a1aa;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
@@ -165,7 +163,6 @@ body {
 }
 .step-num {
   color: #52525b;
-  font-size: 0.75rem;
   margin-bottom: 0.375rem;
 }
 
