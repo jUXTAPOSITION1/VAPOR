@@ -1,6 +1,7 @@
 services:
   vapor:
     build: .
+    restart: unless-stopped
     # Bound to localhost only — Caddy is the public entrypoint (443, with
     # automatic TLS) and reaches this over the internal Docker network.
     # Still reachable directly on the instance itself for debugging via
@@ -26,6 +27,7 @@ services:
 
   caddy:
     image: caddy:2-alpine
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"

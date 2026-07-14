@@ -10,8 +10,14 @@ const envSchema = z.object({
 
   // Intentionally optional at the schema level — a facilitator with no
   // funded signer can still run /verify and /risk-scan; only /settle needs
-  // it. Checked explicitly (and only) inside the settlement service.
-  SETTLEMENT_SIGNER_PRIVATE_KEY: z.string().optional(),
+  // it. But if a value IS provided, it must be a real 32-byte private key —
+  // validated here so a malformed key fails loudly at boot, not with an
+  // uncaught exception (and a crashed process) on the first /settle call.
+  SETTLEMENT_SIGNER_PRIVATE_KEY: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{64}$/, "must be a 0x-prefixed 32-byte (64 hex character) private key")
+    .optional()
+    .or(z.literal("")),
 
   REPUTATION_PROVIDER_BASE_URL: z.string().url().optional().or(z.literal("")),
   REPUTATION_PROVIDER_API_KEY: z.string().optional(),
@@ -39,7 +45,7 @@ export const config = {
   nodeEnv: env.NODE_ENV,
   logLevel: env.LOG_LEVEL,
   databaseUrl: env.DATABASE_URL,
-  settlementSignerPrivateKey: env.SETTLEMENT_SIGNER_PRIVATE_KEY as `0x${string}` | undefined,
+  settlementSignerPrivateKey: (env.SETTLEMENT_SIGNER_PRIVATE_KEY || undefined) as `0x${string}` | undefined,
   reputationProvider: {
     baseUrl: env.REPUTATION_PROVIDER_BASE_URL || undefined,
     apiKey: env.REPUTATION_PROVIDER_API_KEY,
