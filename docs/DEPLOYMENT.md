@@ -48,9 +48,11 @@ Settings → Secrets and variables → Actions:
 |---|---|
 | `SSH_HOST` | the instance's public IP |
 | `SSH_USER` | `ubuntu` (or your image's default user) |
-| `SSH_PRIVATE_KEY` | the private key matching the public key on the instance |
+| `SSH_PRIVATE_KEY_B64` | the private key matching the public key on the instance, **base64-encoded** (`base64 -w0 your_key`) |
 | `BASE_MAINNET_RPC_URL` | your RPC endpoint (already added) |
 | `SETTLEMENT_SIGNER_PRIVATE_KEY` | your funded signer wallet's key (already added) |
+
+`SSH_PRIVATE_KEY_B64` is base64-encoded rather than pasted as a raw multi-line PEM block because copy/paste through a browser or chat client can silently corrupt line breaks in a multi-line key, which then fails with an opaque `error in libcrypto` at connect time. A single base64 line survives copy/paste intact; the workflow decodes it back to the real key before connecting.
 
 The last two never touch the Docker image or GitHub Actions logs — the workflow writes them into a `.env` file on the instance (`chmod 600`) that only `docker compose` reads at container start.
 
