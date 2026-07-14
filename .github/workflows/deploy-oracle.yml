@@ -29,8 +29,10 @@ jobs:
       # pinned too.
       - name: Install Trivy
         run: |
+          mkdir -p "$RUNNER_TEMP/bin"
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v0.69.0/contrib/install.sh \
-            | sh -s -- -b /usr/local/bin v0.69.0
+            | sh -s -- -b "$RUNNER_TEMP/bin" v0.69.0
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
       - name: Scan for OS-package and dependency vulnerabilities
         run: trivy image --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 vapor:scan
