@@ -39,6 +39,16 @@ const envSchema = z.object({
   WEBHOOK_SIGNING_SECRET: z.string().optional(),
   API_KEYS: z.string().optional(),
 
+  // The settlement signer only ever pays gas (transferWithAuthorization
+  // moves USDC directly from payer to payee per the payer's own signature,
+  // never through this wallet) — but an unnoticed empty gas tank still
+  // means settlement silently starts failing. Threshold is in whole ETH
+  // (not wei) since it's meant to be hand-tuned per deployment, not
+  // computed; 0.01 ETH is comfortably more than one Base transferWithAuthorization
+  // costs even during a gas spike, while still catching a draining wallet
+  // well before it actually hits zero.
+  SIGNER_LOW_BALANCE_ETH: z.coerce.number().nonnegative().default(0.01),
+
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   // /verify, /settle, and their batch siblings are the actual payment path —
   // a real agent may legitimately fire several per minute, so this is looser.
@@ -65,6 +75,7 @@ export const config = {
   logLevel: env.LOG_LEVEL,
   databaseUrl: env.DATABASE_URL,
   settlementSignerPrivateKey: (env.SETTLEMENT_SIGNER_PRIVATE_KEY || undefined) as `0x${string}` | undefined,
+  signerLowBalanceEth: env.SIGNER_LOW_BALANCE_ETH,
   reputationProvider: {
     baseUrl: env.REPUTATION_PROVIDER_BASE_URL || undefined,
     apiKey: env.REPUTATION_PROVIDER_API_KEY,

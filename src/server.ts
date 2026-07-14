@@ -4,6 +4,7 @@ import { activeNetworks } from "./config/networks.js";
 import { logger } from "./utils/logger.js";
 import { retryDueWebhooks } from "./core/webhooks/webhook.service.js";
 import { sweepExpiredScanCacheEntries } from "./core/risk/risk-scanner.service.js";
+import { sweepSignerBalances } from "./core/signer/signer-balance.service.js";
 
 const app = createApp();
 
@@ -37,3 +38,16 @@ setInterval(() => {
 setInterval(() => {
   sweepExpiredScanCacheEntries();
 }, 30_000);
+
+// Checks the settlement signer's gas balance every 5 minutes (one cheap
+// eth_getBalance per active network — no need for anything faster) and
+// once immediately at boot, so a draining or already-empty wallet shows up
+// in logs/metrics before settlement starts failing because of it.
+sweepSignerBalances().catch((err) => {
+  logger.error({ err }, "initial signer balance check failed");
+});
+setInterval(() => {
+  sweepSignerBalances().catch((err) => {
+    logger.error({ err }, "signer balance sweep tick failed");
+  });
+}, 5 * 60_000);

@@ -87,6 +87,16 @@ Update the GitHub Actions secret value, then either push any commit to `main` or
 
 The SQLite audit log lives in the `vapor-data` Docker volume, which persists across deploys/restarts on the instance (it's not touched by `rsync` or `docker compose up --build`, only the image is rebuilt). Back up `/var/lib/docker/volumes/vapor_vapor-data` if you want an off-instance copy.
 
+## Signer key custody
+
+`SETTLEMENT_SIGNER_PRIVATE_KEY` lives as a plain environment variable, written into `.env` on the instance the same way as the other secrets (see step 5) — there's no KMS, HSM, or remote-signer integration, since none of those are worth the added operational dependency for what this key actually is: **it never holds payer or payee funds.** `transferWithAuthorization` moves USDC directly from payer to payee per the payer's own EIP-3009 signature; this wallet only broadcasts that transaction and pays its gas. A compromised key lets an attacker drain its ETH balance and, at worst, censor or delay settlements — it cannot redirect, inflate, or steal USDC that was never routed through it.
+
+Given that, the practical risk is a **silently drained or exhausted gas wallet**, not theft of custodied value — so hardening here is a low-balance early warning rather than access control:
+
+- `sweepSignerBalances()` (`src/core/signer/signer-balance.service.ts`) checks each active network's signer balance at boot and every 5 minutes, exposing it as the `vapor_signer_native_balance_wei` Prometheus gauge and logging a warning once it drops below `SIGNER_LOW_BALANCE_ETH` (default `0.01`).
+- Fund the signer with a small, replenishable amount of ETH per chain — enough for expected settlement volume between top-ups, not a large reserve. There's nothing else at risk in this wallet, so over-funding it only increases the cost of a drained-gas incident without buying any additional safety.
+- If stronger custody genuinely becomes necessary (e.g. a signer that also holds value, or multi-operator key-holder requirements), that's a KMS/HSM/remote-signer integration — a deliberate scope decision requiring an external provider account, not something to bolt on silently.
+
 ## Container user
 
 The app process runs as the unprivileged `node` user, not root — `docker-entrypoint.sh` starts as root only long enough to `chown` `/data` and `/app`, then drops privileges via `su-exec` before running migrations or starting the server. That `chown` is idempotent and runs on every start, so it also fixes up a volume that was created and written to as root by an earlier version of this image (e.g. an instance that's been running since before this hardening shipped) — no manual intervention needed on an existing deployment.
