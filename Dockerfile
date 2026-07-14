@@ -1,4 +1,12 @@
-FROM node:20-alpine AS build
+# Pinned to a specific digest, not just the mutable "20-alpine" tag — a tag
+# can be repointed (by upstream or a registry-level compromise) to a
+# different image without any change showing up in this repo's history.
+# Confirmed against the real digest Docker resolved during this project's
+# own recent builds (`docker build` logs, "FROM ... node:20-alpine@sha256:
+# ...resolve ... done"), not typed from memory. Refresh periodically with
+# `docker pull node:20-alpine && docker inspect --format='{{index .RepoDigests 0}}' node:20-alpine`
+# and re-verify the new digest the same way before updating it here.
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS build
 WORKDIR /app
 # Alpine ships no OpenSSL by default; Prisma's engine binaries dynamically
 # link against libssl and fail with an opaque "could not parse schema
@@ -10,7 +18,8 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-FROM node:20-alpine AS runtime
+# Same pinned digest as the build stage above — keep them in sync.
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS runtime
 WORKDIR /app
 # su-exec drops from root to the unprivileged `node` user (built into this
 # base image) after docker-entrypoint.sh fixes ownership — see that file's

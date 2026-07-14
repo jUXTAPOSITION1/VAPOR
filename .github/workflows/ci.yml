@@ -20,6 +20,14 @@ jobs:
 
       - run: npm ci
 
+      # Production dependencies only — dev tooling (vitest/vite/esbuild) has
+      # known advisories with no non-major fix available yet, but nothing in
+      # devDependencies ships in the Docker image (`npm ci --omit=dev`), so
+      # gating on it here would fail CI over risk the running facilitator
+      # never actually carries. Any new high/critical finding in a real
+      # runtime dependency still fails the build.
+      - run: npm audit --omit=dev --audit-level=high
+
       - run: npm run prisma:generate
 
       - run: npm run typecheck

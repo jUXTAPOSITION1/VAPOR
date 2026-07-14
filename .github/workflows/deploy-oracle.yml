@@ -9,8 +9,32 @@ jobs:
   test:
     uses: ./.github/workflows/ci.yml
 
+  container-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The real deploy builds this same Dockerfile a second time, directly
+      # on the Oracle instance over SSH — this build exists only to scan the
+      # image before that deploy runs, not to be deployed itself.
+      - name: Build image for scanning
+        run: docker build -t vapor:scan .
+
+      # Pinned to a commit SHA, not the mutable "v0.30.0" tag — same
+      # convention already used for cloudflare/wrangler-action elsewhere in
+      # this project, for the same reason the Docker base image above is
+      # pinned by digest rather than a tag.
+      - name: Scan for OS-package and dependency vulnerabilities
+        uses: aquasecurity/trivy-action@6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5 # v0.30.0
+        with:
+          image-ref: vapor:scan
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
   deploy:
-    needs: test
+    needs: [test, container-scan]
     runs-on: ubuntu-latest
     concurrency: deploy-group
     steps:

@@ -77,7 +77,7 @@ Once DNS resolves and ports 80/443 are open (step 2 above), the next deploy brin
 
 ## Ongoing deploys
 
-Every push to `main` runs CI (typecheck, tests, build) and, if it passes, the **"Deploy to Oracle Cloud"** workflow: syncs the repo to `/opt/vapor` via `rsync` over SSH, writes the `.env`, and runs `docker compose up -d --build`. No manual step needed after the one-time setup above.
+Every push to `main` runs CI (typecheck, tests, `npm audit --omit=dev --audit-level=high` against production dependencies, build) and a Trivy scan of the built container image (fails on a fixable CRITICAL/HIGH OS-package or dependency vulnerability). Only if both pass does the **"Deploy to Oracle Cloud"** job run: syncs the repo to `/opt/vapor` via `rsync` over SSH, writes the `.env`, and runs `docker compose up -d --build`. No manual step needed after the one-time setup above.
 
 ## Rotating secrets
 
