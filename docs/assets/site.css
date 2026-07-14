@@ -1,0 +1,144 @@
+:root {
+  --bg: #09090b;
+  --panel: #0f0f13;
+  --panel-2: #15151b;
+  --border: rgba(255, 255, 255, 0.08);
+  --cyan: #22d3ee;
+  --violet: #a78bfa;
+  --emerald: #34d399;
+  --amber: #fbbf24;
+  --rose: #fb7185;
+  --grad: linear-gradient(120deg, var(--cyan), var(--violet));
+}
+
+* { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+.grad-text {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero-title {
+  font-size: clamp(2.6rem, 7vw, 5.2rem);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+
+.panel-2 {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 0.85rem;
+}
+
+/* Live pulse dot */
+.live-dot {
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6);
+  animation: pulse-ring 2s infinite;
+}
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+/* Nav — stays a scrollable row of real links rather than collapsing
+   behind a hamburger, so the mobile experience keeps full information
+   density instead of hiding it a tap away. Below 640px it wraps to its
+   own full-width row (see .nav-links-wrap) instead of being squeezed
+   into whatever thin sliver is left next to the logo and status pill —
+   squeezed to ~100px, only a fraction of one link would ever be visible
+   without scrolling first to discover the rest exist. */
+.nav-links {
+  display: flex;
+  gap: 1.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.nav-links::-webkit-scrollbar { display: none; }
+.nav-links a { white-space: nowrap; }
+
+.nav-links-wrap {
+  flex-basis: 100%;
+  order: 3;
+}
+@media (min-width: 640px) {
+  .nav-links-wrap {
+    flex-basis: auto;
+    order: 2;
+  }
+}
+
+/* Stat tile grid — auto-fit keeps multiple columns even on narrow
+   viewports instead of stacking into a single dumbed-down column. 130px
+   (not the more typical 150-180px) is deliberate: it's the largest
+   minimum that still fits 2 columns on a ~360-390px phone viewport after
+   panel padding, rather than falling back to a single stacked column. */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+}
+
+.stat-value {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: clamp(1.35rem, 3.2vw, 2rem);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chart containers keep a substantial, desktop-like height across all
+   breakpoints — Chart.js is told maintainAspectRatio:false and fills this. */
+.chart-shell {
+  position: relative;
+  height: clamp(280px, 46vw, 420px);
+  width: 100%;
+}
+.chart-shell-sm {
+  position: relative;
+  height: clamp(220px, 30vw, 280px);
+  width: 100%;
+}
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  html { scroll-behavior: auto; }
+  .live-dot { animation: none; }
+}
+
+code, pre {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+::selection {
+  background: rgba(167, 139, 250, 0.35);
+}

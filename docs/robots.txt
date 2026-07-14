@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://juxtaposition1.github.io/VAPOR/sitemap.xml

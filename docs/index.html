@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VAPOR — Live x402 Facilitator</title>
+  <meta name="description" content="VAPOR verifies and settles x402 stablecoin payments with a payer risk scanner built into the payment path itself. Zero facilitator fees. Live activity, tracked in real time.">
+  <link rel="canonical" href="https://juxtaposition1.github.io/VAPOR/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://juxtaposition1.github.io/VAPOR/">
+  <meta property="og:site_name" content="VAPOR">
+  <meta property="og:title" content="VAPOR — Live x402 Facilitator">
+  <meta property="og:description" content="Verify and settle x402 stablecoin payments with a payer risk scanner built into the payment path itself. Zero facilitator fees.">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="VAPOR — Live x402 Facilitator">
+  <meta name="twitter:description" content="Verify and settle x402 stablecoin payments with a payer risk scanner built into the payment path itself. Zero facilitator fees.">
+
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <meta name="theme-color" content="#09090b">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body class="text-zinc-200 min-h-screen">
+
+  <!-- Nav -->
+  <nav class="border-b border-white/10 bg-zinc-950/80 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 py-3.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <a href="#top" class="flex items-center gap-2.5 shrink-0 order-1">
+        <img src="assets/favicon.svg" alt="" class="w-7 h-7 rounded-md">
+        <span class="text-xl font-bold tracking-tight">VAPOR</span>
+      </a>
+
+      <div class="flex items-center gap-2 shrink-0 order-2 sm:order-3">
+        <span id="live-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-500 live-dot"></span>
+        <span id="live-label" class="text-xs font-mono text-emerald-400">LIVE</span>
+      </div>
+
+      <div class="nav-links nav-links-wrap text-[13px] text-zinc-400 font-medium">
+        <a href="#activity" class="hover:text-cyan-400 transition">Live Activity</a>
+        <a href="#differentiators" class="hover:text-violet-400 transition">Why VAPOR</a>
+        <a href="#how-it-works" class="hover:text-emerald-400 transition">How it works</a>
+        <a href="#quickstart" class="hover:text-amber-400 transition">Quickstart</a>
+        <a href="https://github.com/jUXTAPOSITION1/VAPOR" class="hover:text-zinc-100 transition">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <main id="top">
+
+    <!-- Hero -->
+    <section class="max-w-7xl mx-auto px-5 sm:px-8 pt-14 pb-10">
+      <div class="reveal">
+        <div class="inline-flex items-center gap-2 text-xs font-mono text-violet-300 bg-violet-500/10 border border-violet-500/20 rounded-full px-3 py-1 mb-6">
+          <i class="fa-solid fa-shield-halved"></i>
+          x402 facilitator · payer risk scanning built in
+        </div>
+        <h1 class="hero-title font-bold">
+          Payments an agent<br>
+          can <span class="grad-text">actually trust.</span>
+        </h1>
+        <p class="mt-6 max-w-2xl text-lg text-zinc-400 leading-relaxed">
+          VAPOR verifies and settles x402 stablecoin payments over EIP-3009 — same protocol,
+          zero facilitator fees — but every payer is scored before settlement, not after.
+          Everything below is live, straight from the running facilitator.
+        </p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="#activity" class="px-5 py-2.5 rounded-lg bg-white text-zinc-950 font-semibold text-sm hover:bg-zinc-200 transition">
+            See it live
+          </a>
+          <a href="https://github.com/jUXTAPOSITION1/VAPOR/blob/main/docs/API.md" class="px-5 py-2.5 rounded-lg panel-2 font-semibold text-sm hover:border-white/20 transition">
+            Read the API docs
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- THE massive live chart -->
+    <section id="activity" class="max-w-7xl mx-auto px-5 sm:px-8 py-10">
+      <div class="reveal panel p-5 sm:p-7">
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+          <div>
+            <h2 class="text-2xl font-bold">Live activity</h2>
+            <p class="text-sm text-zinc-500 mt-1">Verify and settlement requests, last 48 hours — real timestamps, no simulated data.</p>
+          </div>
+          <div class="text-xs font-mono text-zinc-500">
+            uptime <span id="stat-uptime" class="text-zinc-300">—</span>
+          </div>
+        </div>
+
+        <div class="chart-shell">
+          <canvas id="activity-chart"></canvas>
+        </div>
+
+        <div class="stat-grid mt-7">
+          <div class="panel-2 p-4">
+            <div class="text-[11px] uppercase tracking-wide text-zinc-500 font-mono">Verify requests</div>
+            <div id="stat-verify" class="stat-value text-cyan-300 mt-1">—</div>
+          </div>
+          <div class="panel-2 p-4">
+            <div class="text-[11px] uppercase tracking-wide text-zinc-500 font-mono">Settlements</div>
+            <div id="stat-settle" class="stat-value text-violet-300 mt-1">—</div>
+          </div>
+          <div class="panel-2 p-4">
+            <div class="text-[11px] uppercase tracking-wide text-zinc-500 font-mono">Success rate</div>
+            <div id="stat-success-rate" class="stat-value text-emerald-300 mt-1">—</div>
+          </div>
+          <div class="panel-2 p-4">
+            <div class="text-[11px] uppercase tracking-wide text-zinc-500 font-mono">Settled volume</div>
+            <div id="stat-volume" class="stat-value text-zinc-100 mt-1">—</div>
+          </div>
+          <div class="panel-2 p-4">
+            <div class="text-[11px] uppercase tracking-wide text-zinc-500 font-mono">Avg risk score</div>
+            <div id="stat-avg-risk" class="stat-value text-amber-300 mt-1">—</div>
+          </div>
+          <div class="panel-2 p-4">
+            <div class="text-[11px] uppercase tracking-wide text-zinc-500 font-mono">Networks live</div>
+            <div id="stat-networks" class="stat-value text-zinc-100 mt-1">—</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Risk distribution -->
+    <section class="max-w-7xl mx-auto px-5 sm:px-8 py-6">
+      <div class="reveal grid md:grid-cols-5 gap-5">
+        <div class="panel p-5 sm:p-7 md:col-span-2">
+          <h3 class="text-lg font-bold">Payer risk distribution</h3>
+          <p class="text-sm text-zinc-500 mt-1 mb-4">Every payer scanned before settlement — on-chain heuristics plus an optional reputation signal.</p>
+          <div class="chart-shell-sm">
+            <canvas id="risk-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="panel p-5 sm:p-7 md:col-span-3">
+          <h3 class="text-lg font-bold mb-4">How the score is built</h3>
+          <div class="space-y-3 text-sm text-zinc-400">
+            <div class="flex gap-3">
+              <span class="w-2 h-2 mt-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+              <span><span class="text-zinc-200 font-medium">On-chain heuristics, always on.</span> Wallet age, transaction history, contract-vs-EOA — pulled straight from the chain, no third-party dependency required.</span>
+            </div>
+            <div class="flex gap-3">
+              <span class="w-2 h-2 mt-1.5 rounded-full bg-amber-400 shrink-0"></span>
+              <span><span class="text-zinc-200 font-medium">Reputation signal, optional and additive.</span> Plug in any provider speaking VAPOR's small generic contract — degrades gracefully to on-chain-only if unset.</span>
+            </div>
+            <div class="flex gap-3">
+              <span class="w-2 h-2 mt-1.5 rounded-full bg-violet-400 shrink-0"></span>
+              <span><span class="text-zinc-200 font-medium">Your policy decides, not VAPOR.</span> Every payee sets its own max risk score, amount bounds, and deny list — VAPOR scores, your rules decide.</span>
+            </div>
+          </div>
+          <a href="https://github.com/jUXTAPOSITION1/VAPOR/blob/main/docs/RISK_SCANNING.md" class="inline-flex items-center gap-2 text-sm text-cyan-400 hover:text-cyan-300 mt-5 font-medium">
+            Full scoring methodology <i class="fa-solid fa-arrow-right text-xs"></i>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Differentiators -->
+    <section id="differentiators" class="max-w-7xl mx-auto px-5 sm:px-8 py-14">
+      <div class="reveal mb-8">
+        <h2 class="text-2xl sm:text-3xl font-bold">Built for machine-speed commerce</h2>
+        <p class="text-zinc-500 mt-2 max-w-2xl">Everything a standard facilitator does, plus what agent-to-agent payments actually need.</p>
+      </div>
+
+      <div class="reveal grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="panel p-5">
+          <i class="fa-solid fa-radar text-cyan-400 text-lg"></i>
+          <h3 class="font-bold mt-3">Payer risk scanner</h3>
+          <p class="text-sm text-zinc-500 mt-1.5">Every payment scored before it settles, not after — the core of what makes VAPOR different.</p>
+        </div>
+        <div class="panel p-5">
+          <i class="fa-solid fa-sliders text-violet-400 text-lg"></i>
+          <h3 class="font-bold mt-3">Configurable policies</h3>
+          <p class="text-sm text-zinc-500 mt-1.5">Per-payee max risk score, amount bounds, and deny lists — your rules, evaluated on VAPOR's scan.</p>
+        </div>
+        <div class="panel p-5">
+          <i class="fa-solid fa-file-shield text-emerald-400 text-lg"></i>
+          <h3 class="font-bold mt-3">Audit-grade logging</h3>
+          <p class="text-sm text-zinc-500 mt-1.5">Every decision recorded and exportable as JSON or CSV — a real compliance trail, not an afterthought.</p>
+        </div>
+        <div class="panel p-5">
+          <i class="fa-solid fa-bolt text-amber-400 text-lg"></i>
+          <h3 class="font-bold mt-3">Webhook events</h3>
+          <p class="text-sm text-zinc-500 mt-1.5">HMAC-signed <span class="font-mono text-xs">payment.verified</span> / <span class="font-mono text-xs">settled</span> / <span class="font-mono text-xs">denied</span> events to your own endpoint.</p>
+        </div>
+        <div class="panel p-5">
+          <i class="fa-solid fa-hand-holding-dollar text-rose-400 text-lg"></i>
+          <h3 class="font-bold mt-3">Zero facilitator fees</h3>
+          <p class="text-sm text-zinc-500 mt-1.5">VAPOR doesn't take a cut of settled payments. Full stop.</p>
+        </div>
+        <div class="panel p-5">
+          <i class="fa-solid fa-diagram-project text-zinc-300 text-lg"></i>
+          <h3 class="font-bold mt-3">Multi-chain ready</h3>
+          <p class="text-sm text-zinc-500 mt-1.5">Network and token config is data-driven — adding a chain means adding a verified entry, not rewriting the pipeline.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section id="how-it-works" class="max-w-7xl mx-auto px-5 sm:px-8 py-14">
+      <div class="reveal panel p-5 sm:p-8">
+        <h2 class="text-2xl font-bold mb-6">How a payment moves through VAPOR</h2>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+          <div class="panel-2 p-4">
+            <div class="font-mono text-cyan-400 text-xs mb-2">01</div>
+            <div class="font-semibold">Verify</div>
+            <p class="text-zinc-500 mt-1">Scheme, amount, time window, and EIP-712 signature checked against VAPOR's own verified network config.</p>
+          </div>
+          <div class="panel-2 p-4">
+            <div class="font-mono text-violet-400 text-xs mb-2">02</div>
+            <div class="font-semibold">Scan</div>
+            <p class="text-zinc-500 mt-1">The payer is scored — on-chain heuristics, plus a reputation signal if one's configured.</p>
+          </div>
+          <div class="panel-2 p-4">
+            <div class="font-mono text-emerald-400 text-xs mb-2">03</div>
+            <div class="font-semibold">Decide</div>
+            <p class="text-zinc-500 mt-1">The payee's own policy evaluates the score against its configured thresholds and deny list.</p>
+          </div>
+          <div class="panel-2 p-4">
+            <div class="font-mono text-amber-400 text-xs mb-2">04</div>
+            <div class="font-semibold">Settle</div>
+            <p class="text-zinc-500 mt-1">Re-verified against live chain state, then broadcast via <span class="font-mono text-xs">transferWithAuthorization</span>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quickstart -->
+    <section id="quickstart" class="max-w-7xl mx-auto px-5 sm:px-8 py-14">
+      <div class="reveal">
+        <h2 class="text-2xl font-bold mb-2">Quickstart</h2>
+        <p class="text-zinc-500 mb-6 max-w-2xl">Any x402 resource server can point at VAPOR with no protocol changes.</p>
+        <div class="panel p-5 sm:p-6 overflow-x-auto">
+          <pre class="text-sm text-zinc-300 font-mono leading-relaxed"><code>curl https://your-vapor-instance/supported
+
+curl -X POST https://your-vapor-instance/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "x402Version": 1,
+    "paymentPayload": { "...": "the client-signed EIP-3009 authorization" },
+    "paymentRequirements": { "...": "your resource'"'"'s price and payTo address" }
+  }'</code></pre>
+        </div>
+        <p class="text-xs text-zinc-600 mt-3">Full request/response shapes, policy overrides, and webhook contract: <a href="https://github.com/jUXTAPOSITION1/VAPOR/blob/main/docs/API.md" class="text-cyan-400 hover:text-cyan-300">docs/API.md</a>.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/10 mt-10">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 py-8 flex flex-wrap items-center justify-between gap-4 text-xs text-zinc-500">
+      <div>© <span id="footer-year"></span> VAPOR — MIT licensed.</div>
+      <div class="flex items-center gap-5">
+        <a href="https://github.com/jUXTAPOSITION1/VAPOR" class="hover:text-zinc-300 transition">GitHub</a>
+        <a href="https://github.com/jUXTAPOSITION1/VAPOR/blob/main/docs/API.md" class="hover:text-zinc-300 transition">API docs</a>
+        <a href="https://github.com/jUXTAPOSITION1/VAPOR/blob/main/docs/RISK_SCANNING.md" class="hover:text-zinc-300 transition">Risk scoring</a>
+        <span class="font-mono">stats as of <span id="footer-generated-at">—</span></span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>
