@@ -87,6 +87,8 @@ Update the GitHub Actions secret value, then either push any commit to `main` or
 
 The SQLite audit log lives in the `vapor-data` Docker volume, which persists across deploys/restarts on the instance (it's not touched by `rsync` or `docker compose up --build`, only the image is rebuilt). Back up `/var/lib/docker/volumes/vapor_vapor-data` if you want an off-instance copy.
 
+Every `PaymentRecord` row is also chained into a tamper-evident hash chain (`src/core/audit/audit-chain.service.ts`) — altering or deleting a row after the fact is detectable, not just possible to notice by chance. Check it anytime with `GET /audit/verify-chain` (see `docs/API.md`); consider polling it from your own monitoring rather than only checking by hand, since a real tamper attempt is exactly the kind of thing you want to learn about without having to remember to ask.
+
 ## Signer key custody
 
 `SETTLEMENT_SIGNER_PRIVATE_KEY` lives as a plain environment variable, written into `.env` on the instance the same way as the other secrets (see step 5) — there's no KMS, HSM, or remote-signer integration, since none of those are worth the added operational dependency for what this key actually is: **it never holds payer or payee funds.** `transferWithAuthorization` moves USDC directly from payer to payee per the payer's own EIP-3009 signature; this wallet only broadcasts that transaction and pays its gas. A compromised key lets an attacker drain its ETH balance and, at worst, censor or delay settlements — it cannot redirect, inflate, or steal USDC that was never routed through it.

@@ -35,6 +35,20 @@ model PaymentRecord {
   transactionHash String?
   errorReason     String?
 
+  /// Chain-linkage fields (nullable so pre-existing rows from before this
+  /// feature shipped stay valid without a backfill) — see
+  /// src/core/audit/audit-chain.service.ts. `seq` is an app-assigned
+  /// strictly-increasing integer (not the DB's own autoincrement, since
+  /// SQLite only supports that on the actual primary key) giving the chain
+  /// a total order independent of `id`/`createdAt` collisions. `prevHash`
+  /// is the previous chained row's `recordHash` (or the fixed genesis
+  /// constant for the first chained row); `recordHash` covers this row's
+  /// own content plus `prevHash`, so altering OR deleting any chained row
+  /// breaks verification for everything chained after it.
+  seq        Int?    @unique
+  prevHash   String?
+  recordHash String?
+
   @@index([payTo, createdAt])
   @@index([payer])
   @@index([transactionHash])

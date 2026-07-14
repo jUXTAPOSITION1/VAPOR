@@ -244,6 +244,21 @@ Prometheus text-exposition format (`text/plain; version=0.0.4`), scrape-ready as
 | `vapor_settle_outcomes_total` | counter | `success` | `/settle` and `/settle-batch` decisions. |
 | `vapor_risk_score` | histogram | — | Distribution of every computed payer risk score (0-100), across all callers of the risk scanner (`/verify`, `/settle`, `/risk-scan/:address`). |
 | `vapor_webhook_delivery_outcomes_total` | counter | `outcome` | `delivered_first_attempt` / `queued_for_retry` / `delivered_after_retry` / `permanently_failed` / `rejected_unsafe_url`. |
+| `vapor_signer_native_balance_wei` | gauge | `network` | Settlement signer's gas balance, checked at boot and every 5 minutes — see `src/core/signer/signer-balance.service.ts`. This wallet never holds payer/payee funds, so this is a "will settlement stop working" signal, not a custody one. |
+
+## GET /audit/verify-chain
+
+Requires an unscoped `x-api-key` — same gate as `/metrics`, since this covers every `PaymentRecord` row the facilitator has ever written, not one payee's. Recomputes and checks the audit-log hash chain (see `src/core/audit/audit-chain.service.ts`): every `/verify`/`/settle` outcome is written with a hash covering its own content plus the previous row's hash, so altering or deleting a row after the fact breaks the chain from that point forward. Rows written before this feature shipped aren't part of the chain and aren't checked.
+
+```json
+{ "ok": true, "checkedRecords": 4213 }
+```
+
+or, if tampering is detected:
+
+```json
+{ "ok": false, "checkedRecords": 4213, "brokenAtSeq": 1780, "reason": "stored recordHash does not match recomputed hash — row content was altered after being written" }
+```
 
 ## Per-payee policy overrides (`paymentRequirements.extra.policy`)
 

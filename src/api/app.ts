@@ -11,6 +11,7 @@ import { payeeReputationRouter } from "./routes/payee-reputation.route.js";
 import { analyticsRouter } from "./routes/analytics.route.js";
 import { statsRouter } from "./routes/stats.route.js";
 import { metricsRouter } from "./routes/metrics.route.js";
+import { auditRouter } from "./routes/audit.route.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
 import { httpRequestDuration, httpRequestsTotal } from "../core/metrics/metrics.service.js";
 
@@ -67,6 +68,7 @@ export function createApp() {
   app.use(statsRouter);
   app.use(analyticsRouter);
   app.use(metricsRouter);
+  app.use(auditRouter);
 
   app.use((_req, res) => {
     res.status(404).json({ error: "not found" });
