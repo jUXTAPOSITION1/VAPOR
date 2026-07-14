@@ -1,3 +1,5 @@
+# VAPOR Architecture
+
 > Status legend: [OK] implemented & running · [WIP] partial/scaffolded · [TBD] planned
 
 VAPOR is a single, focused service: an **x402 payment facilitator** (verify + settle
