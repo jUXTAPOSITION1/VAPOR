@@ -27,7 +27,16 @@ WORKDIR /app
 RUN apk add --no-cache openssl su-exec
 ENV NODE_ENV=production
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev
+# npm itself is only needed for this install step — the entrypoint invokes
+# the installed `prisma` CLI directly from node_modules/.bin (see
+# docker-entrypoint.sh) and then `node dist/server.js`, neither of which
+# touches npm/npx — so npm's own vendored dependency tree is removed
+# afterward. That tree is what Trivy was flagging (CVEs in npm's bundled
+# cross-spawn/glob/minimatch/tar/sigstore, not in anything VAPOR actually
+# depends on or ships), and removing it shrinks the real runtime attack
+# surface too.
+RUN npm ci --omit=dev && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma

@@ -15,4 +15,8 @@ set -eu
 # unwritable by `node` on the first non-root start.
 chown -R node:node /data /app
 
-exec su-exec node sh -c 'npx prisma migrate deploy && exec node dist/server.js'
+# Invoked as the locally-installed binary, not via `npx` — npm/npx are
+# removed from the runtime image after install (see Dockerfile), since
+# `prisma` is a direct production dependency and its CLI already lands in
+# node_modules/.bin without needing npm present to resolve/run it.
+exec su-exec node sh -c './node_modules/.bin/prisma migrate deploy && exec node dist/server.js'
