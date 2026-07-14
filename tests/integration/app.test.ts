@@ -30,6 +30,47 @@ describe("VAPOR API", () => {
     expect(res.body).toHaveProperty("error");
   });
 
+  it("POST /settle with extra.async:true still reports a final (non-pending) failure when verification itself fails", async () => {
+    // Schema-valid but not cryptographically valid — verification rejects
+    // it on the signature check, before settlement ever broadcasts
+    // anything, so there's nothing "pending" about this outcome even
+    // though async mode was requested.
+    const res = await request(app)
+      .post("/settle")
+      .send({
+        x402Version: 1,
+        paymentPayload: {
+          x402Version: 1,
+          scheme: "exact",
+          network: "eip155:8453",
+          payload: {
+            signature: `0x${"11".repeat(65)}`,
+            authorization: {
+              from: "0x1111111111111111111111111111111111111111",
+              to: "0x2222222222222222222222222222222222222222",
+              value: "1000000",
+              validAfter: "0",
+              validBefore: "9999999999",
+              nonce: "0xbeef",
+            },
+          },
+        },
+        paymentRequirements: {
+          scheme: "exact",
+          network: "eip155:8453",
+          maxAmountRequired: "1000000",
+          resource: "https://example.com/resource",
+          payTo: "0x2222222222222222222222222222222222222222",
+          asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          extra: { async: true },
+        },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(false);
+    expect(res.body.pending).toBeUndefined();
+  });
+
   it("GET /unknown-route returns 404", async () => {
     const res = await request(app).get("/does-not-exist");
     expect(res.status).toBe(404);

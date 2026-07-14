@@ -77,6 +77,8 @@ Verifies a payment payload against a set of payment requirements without moving 
 
 Same request shape as `/verify`. Re-runs the full verification pipeline against current chain state immediately before broadcasting — a stale or replayed `/settle` call cannot slip through on an earlier `/verify` result.
 
+By default this blocks until the transaction is confirmed (or fails) on-chain — `success` is only ever `true` once settlement is final.
+
 **Response**
 
 ```json
@@ -88,6 +90,21 @@ Same request shape as `/verify`. Re-runs the full verification pipeline against 
   "amount": "1000000"
 }
 ```
+
+**Async settlement (`paymentRequirements.extra.async: true`).** VAPOR extension, opt-in only — the base contract above (blocking until confirmed) is the default and is unaffected unless you set this. When set, `/settle` returns as soon as the transaction is *broadcast*, without waiting for confirmation:
+
+```json
+{
+  "success": false,
+  "pending": true,
+  "payer": "0x...",
+  "transaction": "0x...",
+  "network": "eip155:8453",
+  "amount": "1000000"
+}
+```
+
+`success` stays `false` for a pending response on purpose — a resource server that doesn't understand `pending` still sees a normal, conservative "not yet succeeded" result rather than being misled into treating an unconfirmed transaction as final. The real outcome (`payment.settled` / `payment.settlement_failed`) arrives later via your configured `webhookUrl`, or you can independently watch the returned `transaction` hash on-chain. A failure that happens *before* broadcast (invalid payment, no signer configured, malformed signature) is still reported immediately and is never `pending` — there's nothing to wait on if nothing was ever sent. Only `/settle` supports this; `/settle-batch` always settles synchronously, item by item (see below).
 
 ## POST /verify-batch / POST /settle-batch
 

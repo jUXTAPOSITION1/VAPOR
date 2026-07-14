@@ -67,6 +67,14 @@ export interface SettleResponse {
   transaction: string;
   network: string;
   amount?: string;
+  /** VAPOR extension — never present in the base spec, always additive.
+   * Only ever true for the opt-in async settlement path (see
+   * settlement.service.ts's settlePaymentAsync), and always paired with
+   * `success: false`: the transaction has been broadcast but not yet
+   * confirmed. The final outcome arrives via the configured webhookUrl. A
+   * resource server that doesn't know about this field sees a normal
+   * `success: false` and correctly does not proceed. */
+  pending?: boolean;
 }
 
 /**
