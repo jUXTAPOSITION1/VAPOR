@@ -12,7 +12,10 @@ RUN npm run build
 
 FROM node:20-alpine AS runtime
 WORKDIR /app
-RUN apk add --no-cache openssl
+# su-exec drops from root to the unprivileged `node` user (built into this
+# base image) after docker-entrypoint.sh fixes ownership — see that file's
+# comments for why the container still starts as root at all.
+RUN apk add --no-cache openssl su-exec
 ENV NODE_ENV=production
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev
@@ -20,6 +23,8 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY prisma ./prisma
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
 
 EXPOSE 3402
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+ENTRYPOINT ["./docker-entrypoint.sh"]

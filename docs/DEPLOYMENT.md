@@ -87,6 +87,10 @@ Update the GitHub Actions secret value, then either push any commit to `main` or
 
 The SQLite audit log lives in the `vapor-data` Docker volume, which persists across deploys/restarts on the instance (it's not touched by `rsync` or `docker compose up --build`, only the image is rebuilt). Back up `/var/lib/docker/volumes/vapor_vapor-data` if you want an off-instance copy.
 
+## Container user
+
+The app process runs as the unprivileged `node` user, not root — `docker-entrypoint.sh` starts as root only long enough to `chown` `/data` and `/app`, then drops privileges via `su-exec` before running migrations or starting the server. That `chown` is idempotent and runs on every start, so it also fixes up a volume that was created and written to as root by an earlier version of this image (e.g. an instance that's been running since before this hardening shipped) — no manual intervention needed on an existing deployment.
+
 ## Scaling beyond one instance
 
 Single-instance SQLite doesn't support multiple machines writing concurrently. To run more than one: switch `prisma/schema.prisma`'s datasource `provider` from `sqlite` to `postgresql`, point `DATABASE_URL` at a managed or self-hosted Postgres instance, and put a load balancer in front of however many OCI instances you add.
