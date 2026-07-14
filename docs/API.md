@@ -109,6 +109,19 @@ Public, unauthenticated, platform-wide aggregates — no payee or payer addresse
 }
 ```
 
+## GET /stats/timeseries?hours=48
+
+Real hourly activity buckets derived from stored request timestamps (max 720 hours / 30 days; invalid or out-of-range values fall back to 48). Cached for 30 seconds server-side.
+
+```json
+{
+  "hours": 48,
+  "points": [
+    { "bucket": "2026-07-14T03:00:00Z", "verifyCount": 12, "settleCount": 9, "settledVolumeUsd": 9.5 }
+  ]
+}
+```
+
 ## GET /risk-scan/:address?network=eip155:8453
 
 Runs the risk scanner outside of a payment flow — useful for pre-screening at signup or quote time.

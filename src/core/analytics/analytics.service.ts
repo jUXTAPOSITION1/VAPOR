@@ -133,6 +133,61 @@ export async function getPlatformStats(): Promise<PlatformStats> {
   };
 }
 
+export interface TimeseriesPoint {
+  bucket: string; // ISO hour start, e.g. "2026-07-14T04:00:00Z"
+  verifyCount: number;
+  settleCount: number;
+  settledVolumeUsd: number;
+}
+
+interface TimeseriesRow {
+  bucket: string;
+  stage: string;
+  count: bigint | number;
+  volume: bigint | number | null;
+}
+
+/**
+ * Real hourly activity buckets derived directly from stored request
+ * timestamps — not a fabricated or simulated series. Powers the dashboard's
+ * "activity over time" chart. Uses a raw query because SQLite date
+ * truncation/grouping isn't expressible through Prisma's query builder.
+ */
+export async function getHourlyTimeseries(hours = 48): Promise<TimeseriesPoint[]> {
+  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+  const rows = await prisma.$queryRaw<TimeseriesRow[]>`
+    SELECT
+      strftime('%Y-%m-%dT%H:00:00Z', createdAt) as bucket,
+      stage,
+      COUNT(*) as count,
+      SUM(CASE WHEN stage = 'settle' AND settled = 1 THEN CAST(amount AS INTEGER) ELSE 0 END) as volume
+    FROM PaymentRecord
+    WHERE createdAt >= ${since.toISOString()}
+    GROUP BY bucket, stage
+    ORDER BY bucket ASC
+  `;
+
+  const byBucket = new Map<string, TimeseriesPoint>();
+  for (const row of rows) {
+    const point = byBucket.get(row.bucket) ?? {
+      bucket: row.bucket,
+      verifyCount: 0,
+      settleCount: 0,
+      settledVolumeUsd: 0,
+    };
+    const count = Number(row.count);
+    if (row.stage === "verify") point.verifyCount = count;
+    if (row.stage === "settle") {
+      point.settleCount = count;
+      point.settledVolumeUsd = Number(row.volume ?? 0) / 1_000_000;
+    }
+    byBucket.set(row.bucket, point);
+  }
+
+  return [...byBucket.values()].sort((a, b) => a.bucket.localeCompare(b.bucket));
+}
+
 export interface AuditExportOptions {
   payTo: string;
   from?: Date;

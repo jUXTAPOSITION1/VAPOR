@@ -49,4 +49,17 @@ describe("VAPOR API", () => {
     const res = await request(app).get("/stats");
     expect(res.headers["access-control-allow-origin"]).toBe("*");
   });
+
+  it("GET /stats/timeseries returns an hourly bucketed points array", async () => {
+    const res = await request(app).get("/stats/timeseries?hours=24");
+    expect(res.status).toBe(200);
+    expect(res.body.hours).toBe(24);
+    expect(Array.isArray(res.body.points)).toBe(true);
+  });
+
+  it("GET /stats/timeseries clamps an out-of-range hours param to the default", async () => {
+    const res = await request(app).get("/stats/timeseries?hours=99999");
+    expect(res.status).toBe(200);
+    expect(res.body.hours).toBe(48);
+  });
 });
