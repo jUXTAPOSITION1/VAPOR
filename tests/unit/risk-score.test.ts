@@ -6,6 +6,7 @@ const baseSignal: OnChainSignal = {
   isContract: false,
   transactionCount: 50,
   nativeBalanceWei: 10n ** 18n,
+  walletAgeTier: null,
 };
 
 describe("computeRiskScore", () => {
@@ -62,5 +63,49 @@ describe("computeRiskScore", () => {
     expect(a.score).toBe(b.score);
     expect(a.band).toBe(b.band);
     expect(a.reasons).toEqual(b.reasons);
+  });
+
+  it("gives the full low-tx-count penalty when wallet age is unknown", () => {
+    const result = computeRiskScore({ ...baseSignal, transactionCount: 2, walletAgeTier: null }, null);
+    expect(result.score).toBe(10);
+  });
+
+  it("gives the full low-tx-count penalty for a brand-new wallet", () => {
+    const result = computeRiskScore({ ...baseSignal, transactionCount: 2, walletAgeTier: "brand_new" }, null);
+    expect(result.score).toBe(10);
+  });
+
+  it("gives the full low-tx-count penalty for a wallet aged less than a week", () => {
+    const result = computeRiskScore({ ...baseSignal, transactionCount: 2, walletAgeTier: "new" }, null);
+    expect(result.score).toBe(10);
+  });
+
+  it("reduces the low-tx-count penalty once the wallet is at least a week old", () => {
+    const result = computeRiskScore({ ...baseSignal, transactionCount: 2, walletAgeTier: "young" }, null);
+    expect(result.score).toBe(4);
+    expect(result.reasons.some((r) => r.includes("existed for a while"))).toBe(true);
+  });
+
+  it("reduces the low-tx-count penalty for established/mature/veteran wallets alike", () => {
+    for (const tier of ["established", "mature", "veteran"] as const) {
+      const result = computeRiskScore({ ...baseSignal, transactionCount: 1, walletAgeTier: tier }, null);
+      expect(result.score).toBe(4);
+    }
+  });
+
+  it("never moderates the zero-transaction penalty with wallet age, since age is undefined at zero nonce", () => {
+    const result = computeRiskScore({ ...baseSignal, transactionCount: 0, walletAgeTier: null }, null);
+    expect(result.score).toBe(25);
+  });
+
+  it("surfaces the wallet age tier as its own reason when known, even at a high tx count", () => {
+    const result = computeRiskScore({ ...baseSignal, transactionCount: 50, walletAgeTier: "veteran" }, null);
+    expect(result.score).toBe(0);
+    expect(result.reasons).toContain("wallet age tier: veteran");
+  });
+
+  it("adds no age-tier reason when the tier is unknown", () => {
+    const result = computeRiskScore({ ...baseSignal, walletAgeTier: null }, null);
+    expect(result.reasons.some((r) => r.startsWith("wallet age tier"))).toBe(false);
   });
 });

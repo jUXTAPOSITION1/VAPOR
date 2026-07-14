@@ -1,6 +1,13 @@
-import type { OnChainSignal } from "../core/risk/providers/onchain-heuristics.provider.js";
+import type { OnChainSignal, WalletAgeTier } from "../core/risk/providers/onchain-heuristics.provider.js";
 import type { ReputationSignal } from "../core/risk/providers/reputation-intel.provider.js";
 import type { RiskAssessment } from "../types/x402.js";
+
+// A wallet with the same low tx count reads very differently depending on
+// how long it's existed: a handful of transactions in the first hour is
+// the dominant shape of a disposable/scam wallet, while a handful of
+// transactions spread over a month+ is just a low-activity EOA. Ages at
+// or beyond this tier get the reduced penalty below.
+const AGE_MODERATES_LOW_ACTIVITY_FROM: WalletAgeTier[] = ["young", "established", "mature", "veteran"];
 
 /**
  * Pure, deterministic scoring — no I/O, fully unit-testable. Every weight
@@ -17,6 +24,12 @@ import type { RiskAssessment } from "../types/x402.js";
  *   limitation of on-chain-only scoring, not something more heuristics
  *   erase. It's exactly why this stays a score for the payee's policy to
  *   threshold against, never an automatic block VAPOR decides on its own.
+ *   (Wallet age can never moderate this specific penalty — nonce-based
+ *   aging is undefined when the nonce has never moved; see
+ *   OnChainSignal.walletAgeTier.)
+ * - A nonzero-but-low transaction count is moderated by wallet age: the
+ *   same low count is a much weaker signal for a wallet that's existed at
+ *   least a week than for one created minutes ago.
  * - Being a contract (vs. an EOA) is informational, not penalized on its
  *   own — smart-contract wallets are an increasingly normal way to pay,
  *   not inherently suspicious.
@@ -41,8 +54,17 @@ export function computeRiskScore(
     score += 25;
     reasons.push("address has zero prior transactions");
   } else if (onChain.transactionCount < 3) {
-    score += 10;
-    reasons.push(`address has very few prior transactions (${onChain.transactionCount})`);
+    const ageModerates = onChain.walletAgeTier !== null && AGE_MODERATES_LOW_ACTIVITY_FROM.includes(onChain.walletAgeTier);
+    score += ageModerates ? 4 : 10;
+    reasons.push(
+      ageModerates
+        ? `few prior transactions (${onChain.transactionCount}), but the wallet has existed for a while (${onChain.walletAgeTier})`
+        : `address has very few prior transactions (${onChain.transactionCount})`
+    );
+  }
+
+  if (onChain.walletAgeTier !== null) {
+    reasons.push(`wallet age tier: ${onChain.walletAgeTier}`);
   }
 
   if (onChain.isContract) {

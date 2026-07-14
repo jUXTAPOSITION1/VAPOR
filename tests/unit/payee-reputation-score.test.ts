@@ -8,6 +8,7 @@ const baseOnChain: OnChainSignal = {
   isContract: false,
   transactionCount: 50,
   nativeBalanceWei: 10n ** 18n,
+  walletAgeTier: null,
 };
 
 const noHistory = {
