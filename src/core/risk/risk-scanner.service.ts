@@ -5,6 +5,7 @@ import { checkReputation } from "./providers/reputation-intel.provider.js";
 import { computeRiskScore } from "../../utils/risk-score.js";
 import type { RiskAssessment } from "../../types/x402.js";
 import { logger } from "../../utils/logger.js";
+import { riskScoreDistribution } from "../metrics/metrics.service.js";
 
 /**
  * VAPOR's core differentiator: scan a payer address BEFORE settlement
@@ -23,5 +24,7 @@ export async function scanAddress(network: NetworkConfig, address: `0x${string}`
     }),
   ]);
 
-  return computeRiskScore(onChain, reputation);
+  const assessment = computeRiskScore(onChain, reputation);
+  riskScoreDistribution.observe(assessment.score);
+  return assessment;
 }

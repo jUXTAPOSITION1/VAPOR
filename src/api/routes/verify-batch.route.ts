@@ -6,6 +6,7 @@ import { batchRequestSchema } from "../schemas/x402.schemas.js";
 import { recordVerification } from "../../storage/repositories/payment-record.repository.js";
 import { dispatchWebhook, webhookUrlFromExtra } from "../../core/webhooks/webhook.service.js";
 import { logger } from "../../utils/logger.js";
+import { verifyOutcomesTotal } from "../../core/metrics/metrics.service.js";
 
 export const verifyBatchRouter = Router();
 
@@ -21,6 +22,7 @@ verifyBatchRouter.post("/verify-batch", validateBody(batchRequestSchema), async 
   const results = await Promise.all(
     payments.map(async ({ paymentPayload, paymentRequirements }) => {
       const result = await verifyPayment(paymentPayload, paymentRequirements);
+      verifyOutcomesTotal.inc({ valid: String(result.isValid) });
 
       recordVerification(paymentRequirements, result).catch((err) => {
         logger.warn({ err }, "failed to record verification audit entry");

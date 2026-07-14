@@ -83,6 +83,7 @@ Deploys automatically to an Oracle Cloud compute instance on every push to `main
 | `/stats` | GET | none | Public, platform-wide aggregate metrics (powers the live dashboard) |
 | `/analytics/:payTo` | GET | API key | Aggregate stats for a payee |
 | `/analytics/:payTo/export` | GET | API key | Full audit log export (`?format=json\|csv`) |
+| `/metrics` | GET | API key | Prometheus-format operational metrics (latency, verify/settle outcomes, risk score distribution, webhook delivery health) |
 | `/healthz` | GET | none | Liveness check |
 
 Full request/response shapes: [`docs/API.md`](docs/API.md). Risk-scoring methodology: [`docs/RISK_SCANNING.md`](docs/RISK_SCANNING.md).

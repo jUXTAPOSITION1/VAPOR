@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { config } from "../../config/index.js";
 import { logger } from "../../utils/logger.js";
 import { prisma } from "../../storage/prisma.client.js";
+import { webhookDeliveryOutcomesTotal } from "../metrics/metrics.service.js";
 
 export type WebhookEventType = "payment.verified" | "payment.denied" | "payment.settled" | "payment.settlement_failed";
 
@@ -80,7 +81,11 @@ export function dispatchWebhook(
   const signature = sign(payload);
 
   attemptDelivery(url, payload, signature).then(async (result) => {
-    if (result.ok) return;
+    if (result.ok) {
+      webhookDeliveryOutcomesTotal.inc({ outcome: "delivered_first_attempt" });
+      return;
+    }
+    webhookDeliveryOutcomesTotal.inc({ outcome: "queued_for_retry" });
     logger.warn({ url, event, error: result.error }, "webhook delivery failed, queuing for retry");
     try {
       await prisma.webhookDelivery.create({
@@ -121,6 +126,7 @@ export async function retryDueWebhooks(): Promise<void> {
         where: { id: delivery.id },
         data: { status: "delivered", deliveredAt: new Date() },
       });
+      webhookDeliveryOutcomesTotal.inc({ outcome: "delivered_after_retry" });
       continue;
     }
 
@@ -137,6 +143,7 @@ export async function retryDueWebhooks(): Promise<void> {
     });
 
     if (exhausted) {
+      webhookDeliveryOutcomesTotal.inc({ outcome: "permanently_failed" });
       logger.warn(
         { url: delivery.url, event: delivery.eventType, id: delivery.id, error: result.error },
         "webhook delivery permanently failed after max attempts"

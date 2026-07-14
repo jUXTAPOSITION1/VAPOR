@@ -203,6 +203,21 @@ Requires header `x-api-key: <one of API_KEYS>` when `API_KEYS` is configured.
 
 Full audit-log export for the given payee, optionally bounded by `createdAt`. Same auth as above.
 
+## GET /metrics
+
+Requires header `x-api-key: <one of API_KEYS>` when `API_KEYS` is configured — same gate as `/analytics`, since this is operational detail for VAPOR's own operator, unlike the deliberately-public `/stats`.
+
+Prometheus text-exposition format (`text/plain; version=0.0.4`), scrape-ready as-is. Includes standard Node.js process metrics (CPU, memory, event loop lag, GC) via `prom-client`'s `collectDefaultMetrics`, plus VAPOR-specific instruments:
+
+| Metric | Type | Labels | What it tracks |
+|---|---|---|---|
+| `vapor_http_request_duration_seconds` | histogram | `method`, `route`, `status_code` | Per-route request latency. `route` is the matched Express route template (e.g. `/analytics/:payTo`), never the raw path, so address/id values never blow up label cardinality. |
+| `vapor_http_requests_total` | counter | `method`, `route`, `status_code` | Per-route request counts. |
+| `vapor_verify_outcomes_total` | counter | `valid` | `/verify` and `/verify-batch` decisions. |
+| `vapor_settle_outcomes_total` | counter | `success` | `/settle` and `/settle-batch` decisions. |
+| `vapor_risk_score` | histogram | — | Distribution of every computed payer risk score (0-100), across all callers of the risk scanner (`/verify`, `/settle`, `/risk-scan/:address`). |
+| `vapor_webhook_delivery_outcomes_total` | counter | `outcome` | `delivered_first_attempt` / `queued_for_retry` / `delivered_after_retry` / `permanently_failed`. |
+
 ## Per-payee policy overrides (`paymentRequirements.extra.policy`)
 
 | Field | Default | Meaning |

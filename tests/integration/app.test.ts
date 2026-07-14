@@ -104,4 +104,21 @@ describe("VAPOR API", () => {
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty("error");
   });
+
+  it("GET /metrics exposes Prometheus-format output including this app's own request counter", async () => {
+    await request(app).get("/healthz");
+    const res = await request(app).get("/metrics");
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("text/plain");
+    expect(res.text).toContain("vapor_http_requests_total");
+    // Route TEMPLATE, not the raw path, keeps label cardinality bounded.
+    expect(res.text).toContain('route="/healthz"');
+  });
+
+  it("GET /metrics labels a 404 without leaking the raw unmatched path", async () => {
+    await request(app).get("/some/random/nonexistent/path");
+    const res = await request(app).get("/metrics");
+    expect(res.text).not.toContain("/some/random/nonexistent/path");
+    expect(res.text).toContain('route="unmatched"');
+  });
 });

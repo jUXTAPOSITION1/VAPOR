@@ -10,7 +10,9 @@ import { riskScanRouter } from "./routes/risk-scan.route.js";
 import { payeeReputationRouter } from "./routes/payee-reputation.route.js";
 import { analyticsRouter } from "./routes/analytics.route.js";
 import { statsRouter } from "./routes/stats.route.js";
+import { metricsRouter } from "./routes/metrics.route.js";
 import { errorMiddleware } from "./middleware/error.middleware.js";
+import { httpRequestDuration, httpRequestsTotal } from "../core/metrics/metrics.service.js";
 
 export function createApp() {
   const app = express();
@@ -30,6 +32,21 @@ export function createApp() {
   });
   app.options("*", (_req, res) => res.sendStatus(204));
 
+  // Records duration/count per request using the matched route TEMPLATE
+  // (e.g. "/analytics/:payTo"), never the raw path — raw addresses/ids in
+  // labels would give Prometheus unbounded cardinality. req.route is only
+  // populated after routing resolves, so this reads it on `res.finish`.
+  app.use((req, res, next) => {
+    const start = process.hrtime.bigint();
+    res.on("finish", () => {
+      const route = req.route?.path ?? (res.statusCode === 404 ? "unmatched" : "unknown");
+      const labels = { method: req.method, route, status_code: String(res.statusCode) };
+      httpRequestsTotal.inc(labels);
+      httpRequestDuration.observe(labels, Number(process.hrtime.bigint() - start) / 1e9);
+    });
+    next();
+  });
+
   app.get("/healthz", (_req, res) => {
     res.status(200).json({ status: "ok" });
   });
@@ -43,6 +60,7 @@ export function createApp() {
   app.use(payeeReputationRouter);
   app.use(statsRouter);
   app.use(analyticsRouter);
+  app.use(metricsRouter);
 
   app.use((_req, res) => {
     res.status(404).json({ error: "not found" });

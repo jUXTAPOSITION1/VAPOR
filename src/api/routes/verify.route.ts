@@ -6,6 +6,7 @@ import { verifyRequestSchema } from "../schemas/x402.schemas.js";
 import { recordVerification } from "../../storage/repositories/payment-record.repository.js";
 import { dispatchWebhook, webhookUrlFromExtra } from "../../core/webhooks/webhook.service.js";
 import { logger } from "../../utils/logger.js";
+import { verifyOutcomesTotal } from "../../core/metrics/metrics.service.js";
 
 export const verifyRouter = Router();
 
@@ -13,6 +14,7 @@ verifyRouter.post("/verify", validateBody(verifyRequestSchema), async (req, res)
   const { paymentPayload, paymentRequirements } = req.body as unknown as VerifyRequest;
 
   const result = await verifyPayment(paymentPayload, paymentRequirements);
+  verifyOutcomesTotal.inc({ valid: String(result.isValid) });
 
   recordVerification(paymentRequirements, result).catch((err) => {
     logger.warn({ err }, "failed to record verification audit entry");
