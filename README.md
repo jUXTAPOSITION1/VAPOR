@@ -6,6 +6,8 @@ VAPOR is an x402 facilitator: it verifies and settles stablecoin payments author
 
 What VAPOR adds on top of a standard facilitator is a **risk-scanning layer built into the payment path itself** — every payer is assessed before a payee's policy decides whether to accept the payment, not after the money has already moved. No facilitator fees. No lock-in. Built for machine-speed, agent-to-agent commerce.
 
+**Live dashboard:** [juxtaposition1.github.io/VAPOR](https://juxtaposition1.github.io/VAPOR/) · **API:** `https://x402.duckdns.org`
+
 ## Why VAPOR
 
 Payment verification and settlement are table stakes — any facilitator does that. The question that matters for autonomous, agent-driven commerce is: **who, exactly, is paying?** An AI agent buying an API call from another AI agent has no human in the loop to eyeball a suspicious wallet before the transaction clears. VAPOR treats that as the core problem to solve, not an afterthought:

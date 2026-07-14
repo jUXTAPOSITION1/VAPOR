@@ -13,15 +13,15 @@ In the OCI console: **Compute → Instances → Create Instance**.
 
 ### 2. Open the firewall
 
-Two layers both need a rule for port 3402 (or whatever `PORT` you use) inbound, and 22 for SSH:
-- OCI **Security List** / **Network Security Group** on the instance's subnet — add an ingress rule for TCP/3402 (and 22, usually already open).
-- The instance's own OS firewall (Ubuntu ships with `iptables` rules OCI's image preconfigures for port 22 only) — run on the instance:
+Two layers both need rules for ports 80 and 443 (Caddy's public HTTPS entrypoint — see step 6) and 22 for SSH:
+- OCI **Security List** / **Network Security Group** on the instance's subnet — add ingress rules for TCP/80, TCP/443 (and 22, usually already open).
+- The instance's own OS firewall — run on the instance:
   ```bash
-  sudo iptables -I INPUT -p tcp --dport 3402 -j ACCEPT
-  sudo netfilter-persistent save
+  sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+  sudo iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+  sudo netfilter-persistent save 2>/dev/null || sudo iptables-save | sudo tee /etc/iptables/rules.v4 >/dev/null
   ```
-
-If you have a domain, put a reverse proxy (Caddy or nginx) in front for TLS rather than exposing 3402 directly — not included here since it depends on your domain/DNS setup; ask if you want this wired in.
+Port 3402 itself no longer needs to be open — `docker-compose.yml` binds it to `127.0.0.1` only; Caddy is the sole public entrypoint.
 
 ### 3. Install Docker on the instance
 
@@ -55,6 +55,25 @@ Settings → Secrets and variables → Actions:
 `SSH_PRIVATE_KEY_B64` is base64-encoded rather than pasted as a raw multi-line PEM block because copy/paste through a browser or chat client can silently corrupt line breaks in a multi-line key, which then fails with an opaque `error in libcrypto` at connect time. A single base64 line survives copy/paste intact; the workflow decodes it back to the real key before connecting.
 
 The last two never touch the Docker image or GitHub Actions logs — the workflow writes them into a `.env` file on the instance (`chmod 600`) that only `docker compose` reads at container start.
+
+### 6. Public HTTPS via DuckDNS + Caddy
+
+VAPOR's live domain is a free [DuckDNS](https://www.duckdns.org) subdomain rather than a purchased one — DuckDNS gives a real DNS name that Let's Encrypt (via Caddy, already wired into `docker-compose.yml`/`Caddyfile`) can issue a certificate for, which a purchased-domain setup would otherwise require.
+
+On the instance (one-time), set up a cron job that keeps the DuckDNS record pointed at this instance's current public IP — the IP is not guaranteed stable across reboots, and it already changed once during this project's own setup:
+
+```bash
+mkdir -p ~/duckdns
+cat > ~/duckdns/duck.sh <<'EOF'
+echo url="https://www.duckdns.org/update?domains=x402&token=YOUR_DUCKDNS_TOKEN&ip=" | curl -k -o ~/duckdns/duck.log -K -
+EOF
+chmod 700 ~/duckdns/duck.sh
+(crontab -l 2>/dev/null; echo "*/5 * * * * ~/duckdns/duck.sh >/dev/null 2>&1") | crontab -
+~/duckdns/duck.sh
+cat ~/duckdns/duck.log   # should print "OK"
+```
+
+Once DNS resolves and ports 80/443 are open (step 2 above), the next deploy brings up a `caddy` container alongside `vapor` — Caddy requests and renews the Let's Encrypt certificate for the domain in `Caddyfile` automatically, no manual certificate step. The public site's dashboard (`docs/assets/app.js`) already points `API_BASE` at this domain.
 
 ## Ongoing deploys
 

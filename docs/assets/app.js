@@ -2,11 +2,7 @@
 // /stats and /stats/timeseries endpoints. No fabricated numbers: every
 // value rendered here is exactly what the API returned.
 
-// Point this at the facilitator's live HTTPS endpoint once DNS/TLS is
-// wired up (see docs/DEPLOYMENT.md) — plain-HTTP fetches from this
-// HTTPS-served page will otherwise be blocked as mixed content by the
-// browser.
-const API_BASE = "https://vapor-api.example"; // TODO: replace once the domain is live
+const API_BASE = "https://x402.duckdns.org";
 
 const STATS_POLL_MS = 8000;
 const TIMESERIES_POLL_MS = 30000;

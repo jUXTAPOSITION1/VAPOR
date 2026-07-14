@@ -1,0 +1,3 @@
+x402.duckdns.org {
+	reverse_proxy vapor:3402
+}

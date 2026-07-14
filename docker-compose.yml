@@ -1,8 +1,12 @@
 services:
   vapor:
     build: .
+    # Bound to localhost only — Caddy is the public entrypoint (443, with
+    # automatic TLS) and reaches this over the internal Docker network.
+    # Still reachable directly on the instance itself for debugging via
+    # curl http://localhost:3402/healthz.
     ports:
-      - "3402:3402"
+      - "127.0.0.1:3402:3402"
     environment:
       NODE_ENV: production
       PORT: 3402
@@ -20,5 +24,19 @@ services:
     volumes:
       - vapor-data:/data
 
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - vapor
+
 volumes:
   vapor-data:
+  caddy-data:
+  caddy-config:
