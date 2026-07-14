@@ -1,13 +1,11 @@
 :root {
   --bg: #09090b;
-  --panel: #0f0f13;
-  --panel-2: #15151b;
-  --border: rgba(255, 255, 255, 0.08);
-  --cyan: #22d3ee;
-  --violet: #a78bfa;
-  --emerald: #34d399;
-  --amber: #fbbf24;
-  --rose: #fb7185;
+  --border: rgba(255, 255, 255, 0.10);
+  /* One accent, used sparingly (live dot, hairline highlights) — everything
+     else is white/zinc. Risk-band colors in the chart are functional data
+     encoding, not chrome, and stay defined in app.js next to the data they
+     represent rather than here. */
+  --accent: #4ade80;
 }
 
 * { box-sizing: border-box; }
@@ -16,11 +14,10 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Monospace-first, deliberately: this reads as a technical instrument
-   panel, not a marketing site — every number and label is set in the
-   same face the live data itself uses. Space Grotesk is kept only for
-   the wordmark (.font-display), a single small brand accent rather
-   than the site's voice. */
+/* Monospace only — no separate display face for headings/wordmark. This
+   is a terminal instrument panel, not a marketing site: every heading,
+   label, and number is set in the same face the live data itself uses,
+   at the same size and weight as body copy (see .section-title). */
 body {
   background: var(--bg);
   font-family: "JetBrains Mono", ui-monospace, monospace;
@@ -28,7 +25,6 @@ body {
 }
 
 .font-mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
-.font-display { font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif; }
 
 .eyebrow {
   font-size: 0.6875rem;
@@ -36,42 +32,57 @@ body {
   text-transform: uppercase;
 }
 
-.hero-title {
-  font-size: clamp(2.2rem, 6vw, 4rem);
-  line-height: 1.05;
-  letter-spacing: -0.01em;
+/* Section headings: same size/weight as description text on purpose — a
+   "> " prompt prefix marks it as a heading instead of bold/oversized type. */
+.section-title {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #f4f4f5;
+  letter-spacing: 0;
 }
 
+/* A "panel" is a plain bordered section, not a filled card: no background
+   fill, no border-radius, no shadow — just a hairline frame so content
+   stays legible without reading as a UI "widget". */
 .panel {
-  background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 0.375rem;
+  padding: 1.25rem;
+}
+@media (min-width: 640px) {
+  .panel { padding: 1.5rem; }
 }
 
-.panel-2 {
-  background: var(--panel-2);
+.term-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1.1rem;
   border: 1px solid var(--border);
-  border-radius: 0.25rem;
+  color: #e4e4e7;
+  font-size: 0.8125rem;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.term-btn:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
 }
 
-/* Live pulse dot */
+/* Live pulse dot — the one place motion + the accent color are used to
+   draw attention, since it's a genuine liveness signal, not decoration. */
 .live-dot {
-  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6);
+  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.55);
   animation: pulse-ring 2s infinite;
 }
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
-  70% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(74, 222, 128, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
 }
 
 /* Nav — stays a scrollable row of real links rather than collapsing
    behind a hamburger, so the mobile experience keeps full information
    density instead of hiding it a tap away. Below 640px it wraps to its
    own full-width row (see .nav-links-wrap) instead of being squeezed
-   into whatever thin sliver is left next to the logo and status pill —
-   squeezed to ~100px, only a fraction of one link would ever be visible
-   without scrolling first to discover the rest exist. */
+   into whatever thin sliver is left next to the logo and status pill. */
 .nav-links {
   display: flex;
   gap: 1.5rem;
@@ -93,41 +104,89 @@ body {
   }
 }
 
-/* Stat tile grid — auto-fit keeps multiple columns even on narrow
-   viewports instead of stacking into a single dumbed-down column. 130px
-   (not the more typical 150-180px) is deliberate: it's the largest
-   minimum that still fits 2 columns on a ~360-390px phone viewport after
-   panel padding, rather than falling back to a single stacked column. */
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 0.75rem;
+/* Live stat readout: a single wrapping status line (label + tabular-nums
+   value pairs), not a grid of boxed tiles — reads as a terminal status
+   bar rather than a dashboard of "widgets". */
+.stat-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+.stat-pair {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+.stat-label {
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.6875rem;
+}
+.stat-value {
+  color: #f4f4f5;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9375rem;
 }
 
-.stat-value {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: clamp(1.35rem, 3.2vw, 2rem);
-  font-variant-numeric: tabular-nums;
+/* "How the score is built" rows — a plain tag + description, no bullet
+   dot or per-row color coding. */
+.score-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+}
+.score-tag {
+  color: #a1a1aa;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* Differentiators list — a plain stacked list divided by hairlines,
+   never individually-boxed cards, and no numbered eyebrow before each
+   title (the title alone is the label). */
+.diff-list {
+  border-top: 1px solid var(--border);
+}
+.diff-row {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.step-cell {
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+.step-num {
+  color: #52525b;
+  font-size: 0.75rem;
+  margin-bottom: 0.375rem;
 }
 
 /* Chart containers keep a substantial, desktop-like height across all
    breakpoints — Chart.js is told maintainAspectRatio:false and fills this. */
 .chart-shell {
   position: relative;
-  height: clamp(280px, 46vw, 420px);
+  height: clamp(260px, 40vw, 380px);
   width: 100%;
 }
 .chart-shell-sm {
   position: relative;
-  height: clamp(220px, 30vw, 280px);
+  height: clamp(200px, 26vw, 260px);
   width: 100%;
 }
 
 /* Scroll reveal */
 .reveal {
   opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
 .reveal.in-view {
   opacity: 1;
@@ -144,5 +203,5 @@ code, pre {
 }
 
 ::selection {
-  background: rgba(167, 139, 250, 0.35);
+  background: rgba(74, 222, 128, 0.25);
 }

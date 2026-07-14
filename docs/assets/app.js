@@ -26,12 +26,12 @@ function setLiveStatus(ok) {
     dot.classList.add("bg-emerald-500", "live-dot");
     label.textContent = "LIVE";
     label.classList.remove("text-rose-400");
-    label.classList.add("text-emerald-400");
+    label.classList.add("text-zinc-400");
   } else {
     dot.classList.remove("bg-emerald-500", "live-dot");
     dot.classList.add("bg-rose-500");
     label.textContent = "RECONNECTING";
-    label.classList.remove("text-emerald-400");
+    label.classList.remove("text-zinc-400");
     label.classList.add("text-rose-400");
   }
 }
@@ -49,6 +49,8 @@ function formatUptime(seconds) {
 let activityChart = null;
 let riskChart = null;
 
+const MONO_FONT = { family: "JetBrains Mono" };
+
 function renderStats(stats) {
   const successRate =
     stats.totals.verifyRequests > 0 ? (stats.totals.validVerifyCount / stats.totals.verifyRequests) * 100 : 100;
@@ -65,21 +67,26 @@ function renderStats(stats) {
   renderRiskChart(stats.riskBandCounts);
 }
 
+// Horizontal bar, not a doughnut/pie — a plain, information-dense read on
+// exact counts per band rather than a decorative proportion shape. Colors
+// stay functional (risk severity), not brand chrome: green→red maps
+// directly to low→severe, the one place this dashboard uses more than one
+// hue on purpose, since the color IS the data here.
 function renderRiskChart(riskBandCounts) {
   const canvas = document.getElementById("risk-chart");
   if (!canvas || typeof Chart === "undefined") return;
 
   const order = ["low", "medium", "high", "severe"];
-  const colors = { low: "#34d399", medium: "#fbbf24", high: "#fb923c", severe: "#fb7185" };
+  const colors = { low: "#4ade80", medium: "#fbbf24", high: "#fb923c", severe: "#f87171" };
   const labels = order.filter((k) => riskBandCounts[k] !== undefined);
   const data = labels.map((k) => riskBandCounts[k]);
 
   if (labels.length === 0) {
     labels.push("no data yet");
-    data.push(1);
+    data.push(0);
   }
 
-  const backgroundColor = labels[0] === "no data yet" ? ["#27272a"] : labels.map((l) => colors[l]);
+  const backgroundColor = labels[0] === "no data yet" ? ["#3f3f46"] : labels.map((l) => colors[l]);
 
   if (riskChart) {
     riskChart.data.labels = labels;
@@ -90,24 +97,33 @@ function renderRiskChart(riskBandCounts) {
   }
 
   riskChart = new Chart(canvas.getContext("2d"), {
-    type: "doughnut",
+    type: "bar",
     data: {
       labels,
-      datasets: [{ data, backgroundColor, borderWidth: 0 }],
+      datasets: [{ data, backgroundColor, borderWidth: 0, barThickness: 18 }],
     },
     options: {
+      indexAxis: "y",
       maintainAspectRatio: false,
-      cutout: "68%",
-      plugins: {
-        legend: {
-          position: "bottom",
-          labels: { color: "#a1a1aa", font: { family: "Space Grotesk" }, boxWidth: 10, padding: 14 },
+      scales: {
+        x: {
+          beginAtZero: true,
+          grid: { color: "rgba(255,255,255,0.06)" },
+          ticks: { color: "#71717a", precision: 0, font: MONO_FONT },
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: "#a1a1aa", font: MONO_FONT },
         },
       },
+      plugins: { legend: { display: false } },
     },
   });
 }
 
+// Plain thin lines, no fill/gradient — verify in near-white, settle in the
+// site's one accent color, so the two series read clearly against a flat
+// background instead of a glowing area chart.
 function renderActivityChart(points) {
   const canvas = document.getElementById("activity-chart");
   if (!canvas || typeof Chart === "undefined") return;
@@ -126,15 +142,7 @@ function renderActivityChart(points) {
     return;
   }
 
-  const ctx = canvas.getContext("2d");
-  const verifyGradient = ctx.createLinearGradient(0, 0, 0, 360);
-  verifyGradient.addColorStop(0, "rgba(34, 211, 238, 0.35)");
-  verifyGradient.addColorStop(1, "rgba(34, 211, 238, 0)");
-  const settleGradient = ctx.createLinearGradient(0, 0, 0, 360);
-  settleGradient.addColorStop(0, "rgba(167, 139, 250, 0.35)");
-  settleGradient.addColorStop(1, "rgba(167, 139, 250, 0)");
-
-  activityChart = new Chart(ctx, {
+  activityChart = new Chart(canvas.getContext("2d"), {
     type: "line",
     data: {
       labels,
@@ -142,22 +150,20 @@ function renderActivityChart(points) {
         {
           label: "Verify requests",
           data: verify,
-          borderColor: "#22d3ee",
-          backgroundColor: verifyGradient,
-          fill: true,
-          tension: 0.35,
+          borderColor: "#d4d4d8",
+          fill: false,
+          tension: 0.15,
           pointRadius: 0,
-          borderWidth: 2,
+          borderWidth: 1.5,
         },
         {
           label: "Settlements",
           data: settle,
-          borderColor: "#a78bfa",
-          backgroundColor: settleGradient,
-          fill: true,
-          tension: 0.35,
+          borderColor: "#4ade80",
+          fill: false,
+          tension: 0.15,
           pointRadius: 0,
-          borderWidth: 2,
+          borderWidth: 1.5,
         },
       ],
     },
@@ -165,15 +171,15 @@ function renderActivityChart(points) {
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
       scales: {
-        x: { grid: { display: false }, ticks: { color: "#71717a", maxTicksLimit: 8 } },
+        x: { grid: { display: false }, ticks: { color: "#71717a", maxTicksLimit: 8, font: MONO_FONT } },
         y: {
           beginAtZero: true,
           grid: { color: "rgba(255,255,255,0.05)" },
-          ticks: { color: "#71717a", precision: 0 },
+          ticks: { color: "#71717a", precision: 0, font: MONO_FONT },
         },
       },
       plugins: {
-        legend: { labels: { color: "#a1a1aa", font: { family: "Space Grotesk" } } },
+        legend: { labels: { color: "#a1a1aa", font: MONO_FONT, boxWidth: 12 } },
       },
     },
   });
