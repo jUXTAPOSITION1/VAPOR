@@ -216,7 +216,7 @@ Prometheus text-exposition format (`text/plain; version=0.0.4`), scrape-ready as
 | `vapor_verify_outcomes_total` | counter | `valid` | `/verify` and `/verify-batch` decisions. |
 | `vapor_settle_outcomes_total` | counter | `success` | `/settle` and `/settle-batch` decisions. |
 | `vapor_risk_score` | histogram | — | Distribution of every computed payer risk score (0-100), across all callers of the risk scanner (`/verify`, `/settle`, `/risk-scan/:address`). |
-| `vapor_webhook_delivery_outcomes_total` | counter | `outcome` | `delivered_first_attempt` / `queued_for_retry` / `delivered_after_retry` / `permanently_failed`. |
+| `vapor_webhook_delivery_outcomes_total` | counter | `outcome` | `delivered_first_attempt` / `queued_for_retry` / `delivered_after_retry` / `permanently_failed` / `rejected_unsafe_url`. |
 
 ## Per-payee policy overrides (`paymentRequirements.extra.policy`)
 
@@ -238,5 +238,7 @@ VAPOR POSTs a JSON body to the given URL on each decision:
 Event types: `payment.verified`, `payment.denied`, `payment.settled`, `payment.settlement_failed`.
 
 If `WEBHOOK_SIGNING_SECRET` is configured, each delivery includes an `x-vapor-signature` header: `HMAC-SHA256(secret, rawBody)`, hex-encoded. Delivery is fire-and-forget with a 5-second timeout — a slow or failing endpoint never blocks the payment path.
+
+**URL safety.** `webhookUrl` comes from an unauthenticated request body, so every delivery attempt (the first try and every retry) requires `https://` and resolves the hostname to reject any address that's loopback, link-local, private-range, or the cloud metadata address (`169.254.169.254`) — a URL that resolves to a disallowed address is never fetched at all, and a previously-accepted URL that starts resolving to one (e.g. via DNS rebinding) is caught on its next retry and marked `failed` immediately rather than retried further.
 
 **Retries.** A first-attempt failure is queued and retried with exponential backoff (5s, 30s, 2min, 10min, 30min, 1hr — six attempts total, ~2.5h worst case) until it succeeds or is marked permanently failed. The queue is backed by the database, not memory, so it survives a process restart. Every retry resends the exact same signed payload from the first attempt, never a re-signed one. Aggregate delivery health (`pending`/`delivered`/`failed` counts) is exposed at `GET /stats` under `webhookDeliveries`; a delivery that succeeds on its first attempt is never persisted, so this only reflects deliveries that needed at least one retry.

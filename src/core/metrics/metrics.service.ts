@@ -51,6 +51,6 @@ export const riskScoreDistribution = new Histogram({
 export const webhookDeliveryOutcomesTotal = new Counter({
   name: "vapor_webhook_delivery_outcomes_total",
   help: "Total webhook delivery attempts, by outcome",
-  labelNames: ["outcome"] as const, // "delivered_first_attempt" | "queued_for_retry" | "delivered_after_retry" | "permanently_failed"
+  labelNames: ["outcome"] as const, // "delivered_first_attempt" | "queued_for_retry" | "delivered_after_retry" | "permanently_failed" | "rejected_unsafe_url"
   registers: [registry],
 });

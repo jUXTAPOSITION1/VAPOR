@@ -3,6 +3,7 @@ import { config } from "../../config/index.js";
 import { logger } from "../../utils/logger.js";
 import { prisma } from "../../storage/prisma.client.js";
 import { webhookDeliveryOutcomesTotal } from "../metrics/metrics.service.js";
+import { isSafeWebhookUrl } from "./url-guard.js";
 
 export type WebhookEventType = "payment.verified" | "payment.denied" | "payment.settled" | "payment.settlement_failed";
 
@@ -68,6 +69,11 @@ export function nextAttemptDelay(attemptsSoFar: number): number {
  * Signed with HMAC-SHA256 over the raw JSON body when a signing secret is
  * configured, so a payee can verify the event actually came from VAPOR —
  * every retry reuses the exact same signed payload, not a re-signed one.
+ *
+ * The URL is checked against isSafeWebhookUrl() before every single fetch —
+ * see url-guard.ts — since it comes straight from a request body an
+ * unauthenticated caller controls (`paymentRequirements.extra.webhookUrl`)
+ * and would otherwise be a direct SSRF vector into VAPOR's own network.
  */
 export function dispatchWebhook(
   url: string | undefined,
@@ -80,7 +86,14 @@ export function dispatchWebhook(
   const payload = JSON.stringify(body);
   const signature = sign(payload);
 
-  attemptDelivery(url, payload, signature).then(async (result) => {
+  (async () => {
+    if (!(await isSafeWebhookUrl(url))) {
+      logger.warn({ url, event }, "webhook URL rejected: resolves to a disallowed (private/internal) address");
+      webhookDeliveryOutcomesTotal.inc({ outcome: "rejected_unsafe_url" });
+      return;
+    }
+
+    const result = await attemptDelivery(url, payload, signature);
     if (result.ok) {
       webhookDeliveryOutcomesTotal.inc({ outcome: "delivered_first_attempt" });
       return;
@@ -103,7 +116,7 @@ export function dispatchWebhook(
     } catch (err) {
       logger.error({ err }, "failed to persist webhook retry record — this delivery will not be retried");
     }
-  });
+  })();
 }
 
 /**
@@ -119,6 +132,19 @@ export async function retryDueWebhooks(): Promise<void> {
   });
 
   for (const delivery of due) {
+    // Re-checked on every retry, not just at first enqueue — DNS can change
+    // between attempts (see url-guard.ts's docstring on the residual
+    // rebinding window this bounds but doesn't fully close).
+    if (!(await isSafeWebhookUrl(delivery.url))) {
+      await prisma.webhookDelivery.update({
+        where: { id: delivery.id },
+        data: { status: "failed", lastError: "webhook URL resolves to a disallowed (private/internal) address" },
+      });
+      webhookDeliveryOutcomesTotal.inc({ outcome: "rejected_unsafe_url" });
+      logger.warn({ url: delivery.url, id: delivery.id }, "webhook retry aborted: URL now resolves to a disallowed address");
+      continue;
+    }
+
     const result = await attemptDelivery(delivery.url, delivery.payload, delivery.signature ?? undefined);
 
     if (result.ok) {
