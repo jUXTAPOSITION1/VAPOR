@@ -20,18 +20,22 @@ jobs:
       - name: Build image for scanning
         run: docker build -t vapor:scan .
 
-      # Installs the trivy binary directly rather than using
-      # aquasecurity/trivy-action — that action's v0.30.0 release
-      # internally references aquasecurity/setup-trivy@v0.2.2, a tag GitHub
-      # can no longer resolve, breaking the job before any of our own steps
-      # run. Fetches install.sh from the SAME release tag being installed
-      # (not the mutable `main` branch) so the installer script itself is
-      # pinned too.
+      # Downloads and verifies the trivy release directly rather than using
+      # aquasecurity/trivy-action (its v0.30.0 release internally references
+      # aquasecurity/setup-trivy@v0.2.2, a tag GitHub can no longer resolve)
+      # or the project's own install.sh (fails silently in this runner
+      # environment for reasons its own output doesn't surface). A plain
+      # curl + checksum verification is fully transparent: any failure here
+      # shows the real HTTP status or a checksum mismatch, not an opaque
+      # "exit code 1" from a third-party script's internals.
       - name: Install Trivy
         run: |
           mkdir -p "$RUNNER_TEMP/bin"
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v0.69.0/contrib/install.sh \
-            | sh -s -- -b "$RUNNER_TEMP/bin" v0.69.0
+          cd "$RUNNER_TEMP"
+          curl -fsSL -O "https://github.com/aquasecurity/trivy/releases/download/v0.69.0/trivy_0.69.0_Linux-64bit.tar.gz"
+          curl -fsSL -O "https://github.com/aquasecurity/trivy/releases/download/v0.69.0/trivy_0.69.0_checksums.txt"
+          grep "trivy_0.69.0_Linux-64bit.tar.gz" trivy_0.69.0_checksums.txt | sha256sum -c -
+          tar -xzf trivy_0.69.0_Linux-64bit.tar.gz -C "$RUNNER_TEMP/bin" trivy
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
       - name: Scan for OS-package and dependency vulnerabilities
