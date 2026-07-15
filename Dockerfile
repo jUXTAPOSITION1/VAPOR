@@ -9,7 +9,7 @@
 # daemon), not typed from memory. Refresh periodically with
 # `docker pull node:22-alpine && docker inspect --format='{{index .RepoDigests 0}}' node:22-alpine`
 # and re-verify the new digest the same way before updating it here.
-FROM node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS build
+FROM node:26-alpine@sha256:e88a35be04478413b7c71c455cd9865de9b9360e1f43456be5951032d7ac1a66 AS build
 WORKDIR /app
 # Alpine ships no OpenSSL by default; Prisma's engine binaries dynamically
 # link against libssl and fail with an opaque "could not parse schema
@@ -22,7 +22,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Same pinned digest as the build stage above — keep them in sync.
-FROM node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS runtime
+FROM node:26-alpine@sha256:e88a35be04478413b7c71c455cd9865de9b9360e1f43456be5951032d7ac1a66 AS runtime
 WORKDIR /app
 # su-exec drops from root to the unprivileged `node` user (built into this
 # base image) after docker-entrypoint.sh fixes ownership — see that file's
