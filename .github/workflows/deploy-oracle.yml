@@ -14,6 +14,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # TEMPORARY (manual trigger only) — resolves node:22-alpine's real
+      # digest for a Node 20->22 base image bump (Node 20 hit its documented
+      # end-of-life 2026-04-30). Remove once the Dockerfile is repinned.
+      - name: Resolve node:22-alpine digest (manual trigger only)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          docker pull node:22-alpine
+          docker inspect --format='{{index .RepoDigests 0}}' node:22-alpine
+
       # The real deploy builds this same Dockerfile a second time, directly
       # on the Oracle instance over SSH — this build exists only to scan the
       # image before that deploy runs, not to be deployed itself.
