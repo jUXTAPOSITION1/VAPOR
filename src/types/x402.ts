@@ -105,6 +105,7 @@ export interface BatchSettleResponse {
 }
 
 export interface SupportedKind {
+  x402Version: number;
   scheme: "exact";
   network: string;
 }
