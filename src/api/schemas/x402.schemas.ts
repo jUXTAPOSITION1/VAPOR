@@ -34,7 +34,7 @@ export const paymentRequirementsSchema = z.object({
   payTo: address,
   maxTimeoutSeconds: z.number().int().positive().optional(),
   asset: address,
-  extra: z.record(z.unknown()).optional(),
+  extra: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const verifyRequestSchema = z.object({

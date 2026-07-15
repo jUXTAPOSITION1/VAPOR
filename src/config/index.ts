@@ -1,5 +1,10 @@
-import "dotenv/config";
+import { config as loadDotenv } from "dotenv";
 import { z } from "zod";
+
+// dotenv >=17 logs an unstructured "[dotenv] injecting env..." line to
+// stdout by default — quiet:true keeps startup output pure JSON (pino),
+// matching this service's structured-logging-only convention.
+loadDotenv({ quiet: true });
 import { parseApiKeys } from "./api-keys.js";
 
 const envSchema = z.object({

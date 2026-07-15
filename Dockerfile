@@ -1,12 +1,15 @@
-# Pinned to a specific digest, not just the mutable "20-alpine" tag — a tag
+# Pinned to a specific digest, not just the mutable "22-alpine" tag — a tag
 # can be repointed (by upstream or a registry-level compromise) to a
 # different image without any change showing up in this repo's history.
-# Confirmed against the real digest Docker resolved during this project's
-# own recent builds (`docker build` logs, "FROM ... node:20-alpine@sha256:
-# ...resolve ... done"), not typed from memory. Refresh periodically with
-# `docker pull node:20-alpine && docker inspect --format='{{index .RepoDigests 0}}' node:20-alpine`
+# Bumped from node:20-alpine (Node 20 hit its documented end-of-life
+# 2026-04-30 — https://github.com/nodejs/Release) to node:22-alpine
+# (Maintenance LTS through 2027-04-30, matching V.A.P.E's worker/'s own
+# Node 22). Digest resolved via a real `docker pull` + `docker inspect`
+# from a GitHub Actions runner (this repo's dev sandbox has no Docker
+# daemon), not typed from memory. Refresh periodically with
+# `docker pull node:22-alpine && docker inspect --format='{{index .RepoDigests 0}}' node:22-alpine`
 # and re-verify the new digest the same way before updating it here.
-FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS build
+FROM node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS build
 WORKDIR /app
 # Alpine ships no OpenSSL by default; Prisma's engine binaries dynamically
 # link against libssl and fail with an opaque "could not parse schema
@@ -19,7 +22,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Same pinned digest as the build stage above — keep them in sync.
-FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS runtime
+FROM node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS runtime
 WORKDIR /app
 # su-exec drops from root to the unprivileged `node` user (built into this
 # base image) after docker-entrypoint.sh fixes ownership — see that file's

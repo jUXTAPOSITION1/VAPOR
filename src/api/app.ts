@@ -27,6 +27,17 @@ export function createApp() {
   // instead of limiting each one independently.
   app.set("trust proxy", 1);
   app.use(express.json({ limit: "256kb" }));
+  // Express 5 no longer defaults req.body to {} itself (only express.json()
+  // does, and only when Content-Type matches "application/json") — a POST
+  // with no/wrong Content-Type now leaves req.body === undefined instead of
+  // {}. Every route below destructures req.body directly assuming an
+  // object, so this restores Express 4's guarantee explicitly rather than
+  // letting a missing header turn a clean 400 (zod validation) into a
+  // generic 500 (destructuring undefined).
+  app.use((req, _res, next) => {
+    if (req.body === undefined) req.body = {};
+    next();
+  });
   app.use(pinoHttp({ logger }));
 
   // No auth here relies on cookies/sessions (API keys are a header, checked
@@ -38,7 +49,10 @@ export function createApp() {
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key");
     next();
   });
-  app.options("*", (_req, res) => res.sendStatus(204));
+  // Express 5's path-to-regexp bump removed the bare "*" wildcard entirely
+  // (throws "Missing parameter name" at route registration) — a real regex
+  // still matches every path the same way the old "*" did.
+  app.options(/.*/, (_req, res) => res.sendStatus(204));
 
   // Records duration/count per request using the matched route TEMPLATE
   // (e.g. "/analytics/:payTo"), never the raw path — raw addresses/ids in

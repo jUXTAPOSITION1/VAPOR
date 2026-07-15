@@ -19,7 +19,7 @@ export const registerResourceSchema = z.object({
   serviceName: z.string().min(1).max(MAX_SERVICE_NAME_LEN).optional(),
   tags: z.array(z.string().min(1).max(MAX_TAG_LEN)).max(MAX_TAGS).optional(),
   iconUrl: z.string().url().optional(),
-  extensions: z.record(z.unknown()).optional(),
+  extensions: z.record(z.string(), z.unknown()).optional(),
   discoverable: z.boolean().default(true),
 });
 
