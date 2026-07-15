@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels: ["dependencies", "security"]
+    # Prisma's client + CLI must stay on the same major version, or
+    # `prisma generate`'s output stops matching what @prisma/client expects
+    # at runtime — group them so Dependabot only proposes matched bumps.
+    groups:
+      prisma:
+        patterns:
+          - "@prisma/client"
+          - "prisma"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "security"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "ci"]
