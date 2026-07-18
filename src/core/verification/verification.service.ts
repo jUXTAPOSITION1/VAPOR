@@ -92,21 +92,43 @@ export async function verifyPayment(
     return { isValid: false, invalidReason: "signature was not signed by the claimed payer" };
   }
 
-  const client = getPublicClient(network);
-  const [alreadyUsed, balance] = await Promise.all([
-    client.readContract({
-      address: network.usdc.address,
-      abi: EIP3009_ABI,
-      functionName: "authorizationState",
-      args: [from, authorization.nonce],
-    }),
-    client.readContract({
-      address: network.usdc.address,
-      abi: EIP3009_ABI,
-      functionName: "balanceOf",
-      args: [from],
-    }),
-  ]);
+  // Both the getPublicClient() call and the reads below throw on any RPC
+  // trouble (no URL configured, timeout, rate limit, a non-archive node
+  // rejecting a call, etc.) — none of that is caught anywhere above this
+  // function. Left unguarded, that throw propagates out of verifyPayment(),
+  // past the route handler (Express 5 auto-forwards a rejected async
+  // handler to errorMiddleware), and becomes an unrecorded 500: the
+  // resource server sees a bare infra failure indistinguishable from "this
+  // facilitator is down" and the attempt never reaches
+  // recordVerification/verifyOutcomesTotal, so it's invisible in this
+  // facilitator's own /stats too — a transient RPC hiccup silently erased
+  // every trace of a real payment attempt instead of failing informatively.
+  // A clean, recorded "temporarily can't verify" response is the correct
+  // degrade here: this step establishes ground truth (replay/balance) that
+  // nothing below can safely substitute for, so it's a real invalid
+  // result, just not a security invalid one.
+  let alreadyUsed: unknown;
+  let balance: bigint;
+  try {
+    const client = getPublicClient(network);
+    [alreadyUsed, balance] = await Promise.all([
+      client.readContract({
+        address: network.usdc.address,
+        abi: EIP3009_ABI,
+        functionName: "authorizationState",
+        args: [from, authorization.nonce],
+      }),
+      client.readContract({
+        address: network.usdc.address,
+        abi: EIP3009_ABI,
+        functionName: "balanceOf",
+        args: [from],
+      }),
+    ]);
+  } catch (err) {
+    logger.error({ err, network: network.caip2 }, "on-chain state read failed during verification");
+    return { isValid: false, invalidReason: "temporarily unable to verify on-chain state (RPC error)" };
+  }
 
   if (alreadyUsed) {
     return { isValid: false, invalidReason: "authorization nonce has already been used" };
@@ -115,16 +137,30 @@ export async function verifyPayment(
     return { isValid: false, invalidReason: "payer balance is insufficient" };
   }
 
-  const riskAssessment = await scanAddress(network, from);
-  const policyDecision = evaluatePolicy(paymentRequirements, riskAssessment, value, network.usdc.decimals, from);
-  if (!policyDecision.allowed) {
-    return {
-      isValid: false,
-      invalidReason: policyDecision.reason,
-      payer: from,
-      riskAssessment,
-    };
+  // Signature and funds are already confirmed genuinely good at this
+  // point — per this function's own docstring, a risk-scan failure must
+  // never turn a valid payment invalid (VAPOR informs, it doesn't
+  // unilaterally decide). Before this fix that intent was only honored for
+  // a risk assessment that came back negative; an infra failure while
+  // producing the assessment at all (the same class of RPC trouble as
+  // above, since scanAddress's on-chain signal shares this network's
+  // client) still threw straight through with no such grace. Degrading to
+  // "valid, no risk data" here is what actually delivers on the stated
+  // contract.
+  try {
+    const riskAssessment = await scanAddress(network, from);
+    const policyDecision = evaluatePolicy(paymentRequirements, riskAssessment, value, network.usdc.decimals, from);
+    if (!policyDecision.allowed) {
+      return {
+        isValid: false,
+        invalidReason: policyDecision.reason,
+        payer: from,
+        riskAssessment,
+      };
+    }
+    return { isValid: true, payer: from, riskAssessment };
+  } catch (err) {
+    logger.warn({ err, network: network.caip2, from }, "risk scan failed — proceeding without it");
+    return { isValid: true, payer: from };
   }
-
-  return { isValid: true, payer: from, riskAssessment };
 }
