@@ -15,8 +15,11 @@ import type {
 
 // The x402 protocol version these discovery responses speak — matches the
 // "exact"-over-EIP-3009 PaymentPayload/PaymentRequirements shapes this
-// facilitator already verifies and settles (see src/types/x402.ts).
-const X402_VERSION = 1;
+// facilitator already verifies and settles (see src/types/x402.ts), and
+// must track supported.route.ts's own X402_VERSION (currently 2, per
+// @x402/core >=2.18 — see that file's comment for why a stale value
+// here breaks every x402 client on the current SDK).
+const X402_VERSION = 2;
 
 export class RegistrationError extends Error {}
 
