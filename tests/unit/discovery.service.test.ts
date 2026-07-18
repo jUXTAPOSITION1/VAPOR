@@ -150,7 +150,7 @@ describe("listResources", () => {
     const response = await listResources({});
     expect(response.items).toEqual([]);
     expect(response.pagination).toEqual({ limit: 50, offset: 0, total: 0 });
-    expect(response.x402Version).toBe(1);
+    expect(response.x402Version).toBe(2);
   });
 
   it("filters by payTo, scheme, and network", async () => {
@@ -226,7 +226,7 @@ describe("searchResources", () => {
     const result = await searchResources({ query: "bridge" });
     expect(result.resources).toHaveLength(1);
     expect(result.resources[0]?.resource).toBe("https://example.com/data/bridges");
-    expect(result.x402Version).toBe(1);
+    expect(result.x402Version).toBe(2);
   });
 
   it("marks partialResults when matches exceed the requested limit", async () => {
